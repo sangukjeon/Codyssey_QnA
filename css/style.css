@@ -1,11 +1,11 @@
 /* ===== 토큰 ===== */
 :root {
   --white: #fff;
-  --blue-50: #ebf5ff;
-  --blue-100: #d6ebff;
-  --blue-200: #99ceff;
-  --blue-500: #0078ff;
-  --blue-600: #0069ff;
+  --blue-50: #ebf2ff;
+  --blue-100: #dce7fd;
+  --blue-200: #9dbbf8;
+  --blue-500: #2b6bf3;
+  --blue-600: #1e56d6;
 
   --gray-50: #f9f9fb;
   --gray-100: #f2f3f8;
@@ -17,14 +17,16 @@
   --gray-800: #354153;
   --gray-900: #262f3c;
   --gray-1000: #141a24;
-  --red-500: #ff3a5b;
+  --red-500: #e5484d;
+  --success: #2f8a4e;
 
   --primary: var(--blue-500);
   --primary-strong: var(--blue-600);
   --text-strong: var(--gray-1000);
   --text-primary: var(--gray-800);
   --text-secondary: var(--gray-600);
-  --text-tertiary: var(--gray-500);
+  --text-tertiary: var(--gray-600); /* 본문·메타는 대비 4.5:1 이상 */
+  --text-3: var(--gray-500);        /* 자리표시 글자 전용 */
   --text-disabled: var(--gray-400);
   --bg: var(--gray-100);
   --border: var(--gray-200);
@@ -36,7 +38,9 @@
 
   --r-100: 4px; --r-150: 6px; --r-200: 8px; --r-250: 10px; --r-300: 12px;
   --r-350: 14px; --r-400: 16px; --r-600: 24px;
-  --shadow-sheet: 0 0 20px rgb(0 0 0 / .25);
+  --shadow-sm: 0 1px 2px rgb(20 26 36 / .06);
+  --shadow-float: 0 4px 12px rgb(20 26 36 / .16);
+  --shadow-sheet: 0 0 20px rgb(0 0 0 / .18);
 
   --ease: cubic-bezier(.42, 0, .58, 1);
   --font: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui,
@@ -182,7 +186,7 @@ main:focus { outline: none; }
 .search > svg { color: var(--text-tertiary); }
 .search input { flex: 1; min-width: 0; height: 100%; border: 0; background: none; font-size: 16px; color: var(--text-strong); }
 .search input:focus { outline: none; }
-.search input::placeholder { color: var(--text-tertiary); }
+.search input::placeholder { color: var(--text-3); }
 .search input::-webkit-search-cancel-button { display: none; }
 .search-clear { width: 24px; height: 24px; border-radius: 9999px; display: grid; place-items: center; color: var(--white); background: var(--gray-400); }
 .search-clear svg { width: 14px; height: 14px; }
@@ -319,7 +323,7 @@ main:focus { outline: none; }
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   height: 56px; padding: 0 20px 0 16px; border-radius: 9999px;
   background: var(--primary); color: #fff; font-size: 16px; font-weight: 600;
-  box-shadow: 0 4px 12px rgb(0 120 255 / .3);
+  box-shadow: var(--shadow-float);
   transition: transform .1s var(--ease);
 }
 .chat-fab::after { content: ""; position: absolute; inset: 0; border-radius: inherit; transition: background-color .1s var(--ease); }
@@ -333,7 +337,7 @@ main:focus { outline: none; }
   position: fixed; z-index: 60; left: 0; right: 0; bottom: 0;
   height: min(90vh, 720px); display: flex; flex-direction: column;
   background: var(--white); border-radius: var(--r-600) var(--r-600) 0 0; box-shadow: var(--shadow-sheet);
-  transform: translateY(100%); transition: transform .2s var(--ease); overflow: hidden;
+  transform: translateY(100%); transition: transform .24s var(--ease); overflow: hidden;
 }
 .chat.open { transform: translateY(0); }
 .chat[hidden], .scrim[hidden] { display: none; }
@@ -379,7 +383,7 @@ main:focus { outline: none; }
   border: 1px solid transparent; border-radius: var(--r-350); background: var(--gray-100);
   transition: border-color .15s var(--ease);
 }
-.chat-form input::placeholder { color: var(--text-tertiary); }
+.chat-form input::placeholder { color: var(--text-3); }
 .chat-form input:focus { outline: none; border-color: var(--blue-200); }
 .chat-form .btn { width: 48px; height: 48px; padding: 0; border-radius: 9999px; }
 .chat-form .btn:disabled { background: var(--gray-100); color: var(--text-disabled); cursor: not-allowed; transform: none; }
@@ -439,3 +443,57 @@ main:focus { outline: none; }
 .card-meta dl div, .faq-a-foot > *, .stats .num { white-space: nowrap; }
 .chat-head p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .chat-head > div { min-width: 0; }
+
+/* ===== 디자인 규칙 2차 반영 ===== */
+/* 상단 바: 흰 바탕 + 아래 1px 구분선 (헤더 블록 끝에 그어짐) */
+.head { border-bottom-color: var(--border); }
+
+/* 카드·패널: 흰 바탕 + 1px 테두리 + 옅은 그림자, 카드 사이 10px */
+.panel, .card, .faq-list, .detail, .empty { border: 1px solid var(--border); box-shadow: var(--shadow-sm); }
+.panel .card { border: 0; box-shadow: none; }
+.panel .card-list > li + li .card { border-top: 1px solid var(--divider-weak); }
+.card-list { gap: 10px; }
+.section + .section { margin-top: 10px; }
+
+/* 누름: 큰 요소 .96, 작은 요소 .92 (100ms) */
+.card:active, .faq-q:active, .rank-row:active, .cat-tile:active, .bubble-link:active, .btn:active { transform: scale(.96); }
+.chip:active, .tab:active, .icon-btn:active, .more-link:active, .chat-fab:active, .search-clear:active { transform: scale(.92); }
+
+/* 글자: caption 12/18/600 — 태그·메타 */
+.card-meta, .faq-a-foot { font-size: 12px; line-height: 18px; }
+.card-meta dd { font-weight: 600; }
+.chip { font-weight: 600; }
+
+/* 누르는 영역 최소 44×44 */
+.chip { height: 40px; position: relative; }
+.chip::before { content: ""; position: absolute; inset: -2px 0; }
+.more-link { min-height: 44px; }
+.faq-a-foot a { min-height: 44px; padding: 0 2px; }
+.search { padding-right: 2px; }
+.search-clear { width: 44px; height: 44px; background: none; color: var(--gray-400); }
+.search-clear svg { width: 22px; height: 22px; padding: 4px; border-radius: 999px; background: var(--gray-400); color: var(--white); }
+.pager-nav a { min-height: 50px; }
+
+/* 보조 버튼: 높이 48, 흰 바탕 + 1px 선 */
+.btn-tertiary, .back-row .btn-tertiary { background: var(--white); border: 1px solid var(--border); color: var(--text-primary); }
+.btn-block.btn-tertiary { height: 48px; border-radius: var(--r-350); }
+
+/* 비활성: 투명도 대신 색 교체 */
+.chat-form .btn:disabled { background: var(--bg); color: var(--text-3); }
+
+/* ===== 분류별 색 (연한 바탕 / 아이콘 / 글자) ===== */
+.c-attend   { --c-bg: #fff5d1; --c-ic: #d99a00; --c-tx: #7a5600; }
+.c-course   { --c-bg: #e5f2fd; --c-ic: #2d8cd6; --c-tx: #17507e; }
+.c-task     { --c-bg: #eaf6df; --c-ic: #4c9a1a; --c-tx: #2f6110; }
+.c-facility { --c-bg: #ffefe0; --c-ic: #f07800; --c-tx: #8a4300; }
+.c-admin    { --c-bg: #fdeaf0; --c-ic: #e0577a; --c-tx: #8f2e48; }
+.c-etc      { --c-bg: #f2f3f8; --c-ic: #697383; --c-tx: #4a5667; }
+.tag[class*="c-"] { background: var(--c-bg); color: var(--c-tx); }
+.cat-tile[class*="c-"] .ico { background: var(--c-bg); color: var(--c-ic); }
+.cat-tile { background: var(--white); border-color: var(--border); }
+
+@media (prefers-reduced-motion: reduce) {
+  .card:active, .faq-q:active, .rank-row:active, .cat-tile:active, .bubble-link:active, .btn:active,
+  .chip:active, .tab:active, .icon-btn:active, .more-link:active, .chat-fab:active { transform: none; }
+}
+.search-clear[hidden] { display: none; }
