@@ -423,12 +423,6 @@
     setTimeout(() => { t.querySelector(".bubble").innerHTML = html; log.scrollTop = log.scrollHeight; }, delay);
   }
 
-  function score(text, f) {
-    const t = norm(text);
-    let s = 0;
-    f.keywords.forEach((k) => { if (t.includes(norm(k))) s += norm(k).length + 1; });
-    return s;
-  }
   function matchNotices(text) {
     const t = norm(text);
     return NOTICES.filter((n) => n.title.replace(/[\[\]()]/g, " ").split(/\s+/).filter((w) => w.length >= 3 && !/코디세이|안내|공지|대전/.test(w)).some((w) => t.includes(norm(w))));
@@ -436,9 +430,9 @@
 
   function ask(text) {
     addMsg("user", esc(text));
-    const ranked = FAQS.map((f) => ({ f, s: score(text, f) })).filter((x) => x.s > 0).sort((a, b) => b.s - a.s || a.f.id - b.f.id);
-    const best = ranked[0] && ranked[0].f;
-    const extraFaq = ranked.slice(1, 3).map((x) => x.f);
+    const m = Matcher.rank(text, FAQS); // js/matcher.js
+    const best = m.best;
+    const extraFaq = m.others;
     const notes = [...new Map([...(best && best.related ? best.related.map((id) => NOTICES.find((n) => n.id === id)) : []), ...matchNotices(text)]
       .filter(Boolean).map((n) => [n.id, n])).values()].slice(0, 2);
 
@@ -452,6 +446,8 @@
         ...extraFaq.map((f) => linkBtn(`#faq/${f.id}`, f.q, ICON.chevR)),
       ];
       html += `<div class="bubble-links"><span>관련 내용</span>${links.join("")}</div>`;
+    } else if (m.hints.length) {
+      html = `<p>딱 맞는 답을 찾지 못했습니다. 혹시 이 질문인가요?</p><div class="bubble-links">${m.hints.map((f) => linkBtn(`#faq/${f.id}`, f.q, ICON.chevR)).join("")}</div>`;
     } else if (notes.length) {
       html = `<p>관련된 공지를 찾았습니다.</p><div class="bubble-links">${notes.map((n) => linkBtn(`#notice/${n.id}`, n.title, ICON.doc)).join("")}</div>`;
     } else {

@@ -21,8 +21,16 @@
 - 공지 추가: `NOTICES` 배열에 항목 추가 (`pinned: true`면 상단 고정, 배열 순서대로 표시, `source`로 출처 표시: OT / GB / EXAM, 없으면 디스코드 공지)
 - 본문 작성: `# 소제목`, `- 목록`, 빈 줄은 문단 간격
 
+## 챗봇 매칭 정확도 확인
+`js/data.js`의 질문·키워드나 `js/matcher.js`를 고친 뒤 아래로 맞히는 비율을 확인합니다.
+```bash
+node tests/chatbot-eval.js          # 조정용 질문 108개
+node tests/chatbot-eval.js holdout  # 조정에 쓰지 않은 확인용 질문 40개
+```
+새 질문을 추가할 때는 `keywords`에 줄임말·구어체 표현도 넣고, 여러 질문에 공통으로 나오는 말은 `js/matcher.js`의 같은 뜻 묶음(SYN)이나 흔한 말 목록(GENERIC)에 넣습니다.
+
 ## 배포할 때
-`css/style.css`, `js/data.js`, `js/app.js`를 고치면 `index.html`의 `?v=` 값도 함께 바꿔 주세요. 그래야 휴대폰 브라우저가 예전 파일을 캐시에서 다시 쓰지 않습니다.
+`css/style.css`, `js/data.js`, `js/matcher.js`, `js/app.js`를 고치면 `index.html`의 `?v=` 값도 함께 바꿔 주세요. 그래야 휴대폰 브라우저가 예전 파일을 캐시에서 다시 쓰지 않습니다.
 
 ## 로컬 미리보기
 ```bash
