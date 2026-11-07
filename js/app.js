@@ -497,6 +497,13 @@
     });
   });
 
+  // 로고: 홈 검색어를 비우고 한눈에 보기 첫 화면으로 (이미 홈이면 hashchange 가 안 생기므로 직접 다시 그림)
+  $(".logo").addEventListener("click", (e) => {
+    state.homeQuery = "";
+    const h = location.hash;
+    if (h === "#home" || h === "" || h === "#") { e.preventDefault(); route(); }
+  });
+
   route();
 
   /* ---------- 챗봇 (키워드 매칭) ---------- */
