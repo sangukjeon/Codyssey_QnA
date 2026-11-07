@@ -485,6 +485,7 @@ main:focus { outline: none; }
 .c-task     { --c-bg: #eaf6df; --c-ic: #4c9a1a; --c-tx: #2f6110; }
 .c-facility { --c-bg: #ffefe0; --c-ic: #f07800; --c-tx: #8a4300; }
 .c-admin    { --c-bg: #fdeaf0; --c-ic: #e0577a; --c-tx: #8f2e48; }
+.c-rules    { --c-bg: #eef0ff; --c-ic: #5b5fd6; --c-tx: #34379a; }
 .c-etc      { --c-bg: #f2f3f8; --c-ic: #697383; --c-tx: #4a5667; }
 .tag[class*="c-"] { background: var(--c-bg); color: var(--c-tx); }
 .cat-tile[class*="c-"] .ico { background: var(--c-bg); color: var(--c-ic); }
@@ -589,3 +590,5 @@ main { padding-bottom: 16px; min-height: 0; }
 .notice-box { padding: 14px 16px; border-radius: var(--r-300); background: var(--white); border: 1px solid var(--border); font-size: 13px; line-height: 20px; color: var(--text-secondary); }
 .notice-box p + p { margin-top: 4px; }
 .notice-box b { color: var(--text-strong); font-weight: 700; }
+
+.detail-head .source { margin: 8px 0 0; font-size: 12px; line-height: 18px; color: var(--text-tertiary); }

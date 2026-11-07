@@ -41,6 +41,8 @@
       task: '<rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2M12 11h4M12 16h4M8 11h.01M8 16h.01"/>',
       facility: '<path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18zM6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2M10 6h4M10 10h4M10 14h4M10 18h4"/>',
       admin: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v4a2 2 0 0 0 2 2h4M10 9H8M16 13H8M16 17H8"/>',
+      admin: '<rect width="20" height="14" x="2" y="5" rx="2"/><path d="M2 10h20M6 15h4"/>',
+      rules: '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/>',
       etc: '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/>',
     },
   };
@@ -65,6 +67,15 @@
     $("#pageTitle").textContent = title;
     document.title = `${title} | 코디세이 Q&A 허브`;
   }
+
+  // 공지 출처 표시
+  const SOURCES = {
+    OT: "입학연수과정 오리엔테이션 자료 (10월 28일)",
+    GB: "AI 네이티브 과정 교육시설 이용 가이드북",
+    "OT+GB": "오리엔테이션 자료 + AI 네이티브 과정 가이드북",
+    EXAM: "시험 기능 학습자 가이드",
+  };
+  const sourceName = (k) => SOURCES[k] || "디스코드 allinone-공지사항 채널";
 
   // 상세 화면 맨 위 '목록으로' 링크
   const backLink = (href, label) =>
@@ -108,7 +119,7 @@
           <span class="summary-icon">${ICON.info}</span>
           <div>
             <h2>디스코드에 묻기 전에 먼저 확인해 주세요</h2>
-            <p>디스코드 공지 채널의 공지와, 공지에서 뽑은 자주 묻는 질문을 한곳에 정리했습니다.</p>
+            <p>디스코드 공지, 오리엔테이션 자료, 시험 가이드를 바탕으로 자주 묻는 질문을 한곳에 정리했습니다.</p>
                       </div>
         </div>
         <div class="stats"><span>정리된 질문<span class="num"><b>${FAQS.length}</b>개</span></span><span>분류<span class="num"><b>${CATEGORIES.length - 1}</b>개</span></span><span>공지<span class="num"><b>${NOTICES.length}</b>건</span></span></div>
@@ -298,6 +309,7 @@
         <div class="detail-head">
           <div class="tag-row">${n.pinned ? '<span class="tag">고정</span>' : ""}<span class="tag c-${n.cat}">${catName(n.cat)}</span></div>
           <h2>${esc(n.title)}</h2>
+          <p class="source">출처: ${esc(sourceName(n.source))}</p>
         </div>
         <div class="detail-body">${paras(n.body)}</div>
         ${n.files.length ? `<div class="attach"><h3>첨부파일 ${n.files.length}</h3><ul>${n.files.map((f) => `<li><a href="#notice/${n.id}" onclick="return false">${ICON.file}${esc(f)}</a></li>`).join("")}</ul></div>` : ""}
