@@ -10,9 +10,9 @@
 
   const ICON = {
     chevR: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>',
-    chevRLg: '<svg class="chev" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>',
+    chevRLg: '<svg class="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>',
     chevD: '<svg class="faq-chev" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>',
-    clip: '<svg class="clip" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-label="첨부파일 있음" role="img"><path d="M8 8.5h9a3.5 3.5 0 0 1 0 7H6.5a2.5 2.5 0 0 1 0-5H16"/></svg>',
+    clip: '<svg class="clip" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-label="첨부파일 있음" role="img"><path d="M8 8.5h9a3.5 3.5 0 0 1 0 7H6.5a2.5 2.5 0 0 1 0-5H16"/></svg>',
     bookmark: '<svg class="card-pin" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true"><path d="M6 3.5h12v17l-6-4.5-6 4.5z"/></svg>',
     search: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m20 20-4.8-4.8"/></svg>',
     close: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>',
@@ -48,6 +48,7 @@
       t.tabIndex = on ? 0 : -1;
     });
     main.setAttribute("aria-labelledby", `tab-${tab}`);
+    moveTabBar();
     $("#pageTitle").textContent = title;
     document.title = `${title} | 코디세이 Q&A 허브`;
     const home = '<li><a href="#home" aria-label="홈"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3 3 10.5V21h6v-6h6v6h6V10.5z"/></svg></a></li>';
@@ -58,7 +59,7 @@
 
   function noticeCard(n, index) {
     const head = n.pinned
-      ? `${ICON.bookmark}<span class="sr-only">고정 공지</span>`
+      ? `<span class="tag">고정</span>`
       : `<span class="card-no">No.${index}</span>`;
     return `<li><a class="card" href="#notice/${n.id}">
       ${head}
@@ -79,7 +80,7 @@
         <span class="faq-mark" aria-hidden="true">Q</span>
         <span class="faq-body-wrap">
           <span class="faq-q-text">${esc(f.q)}</span>
-          <span class="faq-sub"><span class="tag soft">${catName(f.cat)}</span><span class="freq">${ICON.chat}디스코드 문의 ${f.count}회</span></span>
+          <span class="faq-sub"><span class="tag soft">${catName(f.cat)}</span><span class="freq">${ICON.chat}디스코드 문의 <b>${f.count}</b>회</span></span>
         </span>
         ${ICON.chevD}
       </button>
@@ -98,18 +99,18 @@
     const counts = (id) => FAQS.filter((f) => f.cat === id).length;
 
     main.innerHTML = `
-      <section class="section">
+      <section class="section panel">
         <div class="summary">
           <span class="summary-icon">${ICON.info}</span>
           <div>
             <h2>디스코드에 묻기 전에 먼저 확인해 주세요</h2>
             <p>문의 채널에 반복해서 올라온 질문과 운영 공지를 한곳에 정리했습니다.</p>
-            <div class="stats"><span>정리된 질문 <b>${FAQS.length}</b>개</span><span>누적 문의 <b>${totalAsks}</b>건</span><span>공지 <b>${NOTICES.length}</b>건</span></div>
-          </div>
+                      </div>
         </div>
+        <div class="stats"><span>정리된 질문<span class="num"><b>${FAQS.length}</b>개</span></span><span>누적 문의<span class="num"><b>${totalAsks}</b>건</span></span><span>공지<span class="num"><b>${NOTICES.length}</b>건</span></span></div>
       </section>
 
-      <section class="section" aria-labelledby="h-notice">
+      <section class="section panel" aria-labelledby="h-notice">
         <div class="section-head">
           <h2 class="section-title" id="h-notice">주요 공지</h2>
           <a class="more-link" href="#notice">전체 보기 ${ICON.chevR}</a>
@@ -117,7 +118,7 @@
         <ul class="card-list">${notices.map((n) => noticeCard(n, sortedNotices().filter((x) => !x.pinned).indexOf(n) + 1)).join("")}</ul>
       </section>
 
-      <section class="section" aria-labelledby="h-top">
+      <section class="section panel" aria-labelledby="h-top">
         <div class="section-head">
           <div>
             <h2 class="section-title" id="h-top">많이 올라온 질문 TOP 5</h2>
@@ -125,16 +126,16 @@
           </div>
           <a class="more-link" href="#faq">전체 보기 ${ICON.chevR}</a>
         </div>
-        <ol class="rank-list">${top.map((f, i) => `<li><a class="rank-row" href="#faq/${f.id}" style="text-decoration:none;color:inherit">
-          <span class="rank-num">${i + 1}</span><span class="rank-q">${esc(f.q)}</span><span class="freq">${f.count}회</span><span class="chev">${ICON.chevR}</span>
+        <ol class="rank-list">${top.map((f, i) => `<li><a class="rank-row" href="#faq/${f.id}">
+          <span class="rank-num">${i + 1}</span><span class="rank-q">${esc(f.q)}</span><span class="freq"><b>${f.count}</b>회</span><span class="chev">${ICON.chevR}</span>
         </a></li>`).join("")}</ol>
       </section>
 
-      <section class="section" aria-labelledby="h-cat">
+      <section class="section panel" aria-labelledby="h-cat">
         <div class="section-head"><h2 class="section-title" id="h-cat">분류별로 찾기</h2></div>
         <div class="cat-grid">${CATEGORIES.filter((c) => c.id !== "all").map((c) => `
           <button class="cat-tile" type="button" data-cat="${c.id}">
-            <span class="ico">${catIcon(c.id)}</span><b>${c.name}</b><span>질문 ${counts(c.id)}개</span>
+            <span class="ico">${catIcon(c.id)}</span><b>${c.name}</b><span class="sub">질문 <em>${counts(c.id)}</em>개</span>
           </button>`).join("")}</div>
       </section>`;
 
@@ -162,7 +163,7 @@
           return `<button class="chip" type="button" data-cat="${c.id}" aria-pressed="${state.faqCat === c.id}">${c.name}<span class="n">${n}</span></button>`;
         }).join("")}
       </div>
-      <div class="list-toolbar" style="justify-content:space-between;margin-top:20px">
+      <div class="list-toolbar" style="margin-top:16px">
         <span class="list-count" id="faqCount"></span>
         <span class="list-count">문의 많은 순</span>
       </div>
@@ -192,7 +193,7 @@
       .filter((f) => !q || norm(f.q + f.a).includes(q) || f.keywords.some((k) => q.includes(norm(k)) || norm(k).includes(q)))
       .sort((a, b) => b.count - a.count);
 
-    $("#faqCount").textContent = `${list.length}건`;
+    $("#faqCount").innerHTML = `<b>${list.length}</b>건`;
     const box = $("#faqResult");
     if (!list.length) {
       box.innerHTML = `<div class="empty"><span class="ico">${ICON.search}</span><b>찾는 질문이 아직 정리되지 않았습니다</b>
@@ -223,7 +224,7 @@
     let no = 0;
     main.innerHTML = `
       <div class="list-toolbar">
-        <span class="list-count">전체 ${all.length}건</span>
+        <span class="list-count">전체 <b>${all.length}</b>건</span>
       </div>
       <ul class="card-list">${shown.map((n) => noticeCard(n, n.pinned ? 0 : ++no)).join("")}</ul>`;
   }
@@ -240,20 +241,30 @@
     main.innerHTML = `
       <article class="detail">
         <div class="detail-head">
-          ${n.pinned ? '<span class="tag">고정 공지</span>' : '<span class="tag soft">공지</span>'}
+          ${n.pinned ? '<span class="tag">고정</span>' : '<span class="tag soft">공지</span>'}
           <h2>${esc(n.title)}</h2>
           <div class="card-meta"><dl><div><dt>작성자</dt><dd>${esc(n.author)}</dd></div><div><dt>등록일</dt><dd>${n.date}</dd></div></dl></div>
         </div>
         <div class="detail-body">${paras(n.body)}</div>
         ${n.files.length ? `<div class="attach"><h3>첨부파일 ${n.files.length}</h3><ul>${n.files.map((f) => `<li><a href="#notice/${n.id}" onclick="return false">${ICON.file}${esc(f)}</a></li>`).join("")}</ul></div>` : ""}
-        ${related.length ? `<div class="attach" style="background:var(--primary-5)"><h3>이 공지와 관련된 질문</h3><ul>${related.map((f) => `<li><a href="#faq/${f.id}">${ICON.chevR}${esc(f.q)}</a></li>`).join("")}</ul></div>` : ""}
+        ${related.length ? `<div class="attach info"><h3>이 공지와 관련된 질문</h3><ul>${related.map((f) => `<li><a href="#faq/${f.id}">${ICON.chevR}${esc(f.q)}</a></li>`).join("")}</ul></div>` : ""}
         <ul class="pager-nav">
-          <li>${prev ? `<a href="#notice/${prev.id}"><span>이전 글</span><span>${esc(prev.title)}</span></a>` : `<a aria-disabled="true"><span>이전 글</span><span style="color:var(--fg-4)">이전 글이 없습니다</span></a>`}</li>
-          <li>${next ? `<a href="#notice/${next.id}"><span>다음 글</span><span>${esc(next.title)}</span></a>` : `<a aria-disabled="true"><span>다음 글</span><span style="color:var(--fg-4)">다음 글이 없습니다</span></a>`}</li>
+          <li>${prev ? `<a href="#notice/${prev.id}"><span>이전 글</span><span>${esc(prev.title)}</span></a>` : `<a aria-disabled="true"><span>이전 글</span><span>이전 글이 없습니다</span></a>`}</li>
+          <li>${next ? `<a href="#notice/${next.id}"><span>다음 글</span><span>${esc(next.title)}</span></a>` : `<a aria-disabled="true"><span>다음 글</span><span>다음 글이 없습니다</span></a>`}</li>
         </ul>
       </article>
-      <div class="back-row"><a class="btn btn-tertiary" href="#notice">목록</a></div>`;
+      <div class="back-row"><a class="btn btn-tertiary btn-block" href="#notice">목록으로</a></div>`;
   }
+
+  function moveTabBar() {
+    const t = document.querySelector('.tab[aria-selected="true"]');
+    const bar = $(".tab-bar");
+    if (!t || !bar) return;
+    bar.style.width = `${t.offsetWidth}px`;
+    bar.style.transform = `translateX(${t.offsetLeft}px)`;
+  }
+  window.addEventListener("resize", moveTabBar);
+  document.fonts && document.fonts.ready.then(moveTabBar);
 
   /* ---------- 라우터 ---------- */
   function route() {

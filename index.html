@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>코디세이 Q&amp;A 허브</title>
   <meta name="description" content="디스코드에 자주 올라오는 문의와 공지를 한곳에 정리한 코디세이 교육생 안내 페이지">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -23,6 +23,7 @@
     </div>
   </header>
 
+  <div class="head">
   <div class="wrap">
     <div class="page-head">
       <h1 class="page-title" id="pageTitle">한눈에 보기</h1>
@@ -33,8 +34,13 @@
         <button class="tab" role="tab" id="tab-home" data-route="home" aria-controls="main">한눈에 보기</button>
         <button class="tab" role="tab" id="tab-faq" data-route="faq" aria-controls="main">자주 묻는 질문</button>
         <button class="tab" role="tab" id="tab-notice" data-route="notice" aria-controls="main">공지사항</button>
+        <span class="tab-bar" aria-hidden="true"></span>
       </div>
     </div>
+  </div>
+  </div>
+
+  <div class="wrap">
 
     <main id="main" tabindex="-1" role="tabpanel" aria-live="polite"></main>
   </div>
