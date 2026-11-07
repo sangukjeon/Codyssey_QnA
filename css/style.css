@@ -78,7 +78,7 @@ svg { display: block; flex-shrink: 0; }
   position: sticky; top: 0; z-index: 20;
   background: var(--bg-page);
 }
-.topbar .wrap { display: flex; align-items: center; height: 64px; gap: 8px; }
+.topbar .wrap { display: flex; align-items: center; justify-content: flex-end; height: 64px; gap: 8px; }
 .brand {
   display: flex; align-items: center; gap: 8px; margin-right: auto;
   font-size: 17px; font-weight: 700; color: var(--fg-1); text-decoration: none;

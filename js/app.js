@@ -33,7 +33,7 @@
   const catIcon = (id) => `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON.cat[id]}</svg>`;
 
   /* ---------- 상태 ---------- */
-  const state = { faqCat: "all", faqQuery: "", noticeSize: 10 };
+  const state = { faqCat: "all", faqQuery: "" };
   const main = $("#main");
   const sortedNotices = () => [...NOTICES].sort((a, b) => (b.pinned - a.pinned) || 0);
   const totalAsks = FAQS.reduce((s, f) => s + f.count, 0);
@@ -219,21 +219,13 @@
   function renderNotice() {
     setChrome("notice", "공지사항", [{ label: "공지사항" }]);
     const all = sortedNotices();
-    const shown = all.slice(0, state.noticeSize);
+    const shown = all;
     let no = 0;
     main.innerHTML = `
       <div class="list-toolbar">
-        <span class="list-count">${shown.length}건 / ${all.length}건</span>
-        <div class="select-wrap">
-          <label class="sr-only" for="noticeSize">한 번에 볼 개수</label>
-          <select id="noticeSize">
-            ${[5, 10, 20].map((n) => `<option value="${n}" ${n === state.noticeSize ? "selected" : ""}>${n}개 보기</option>`).join("")}
-          </select>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-        </div>
+        <span class="list-count">전체 ${all.length}건</span>
       </div>
       <ul class="card-list">${shown.map((n) => noticeCard(n, n.pinned ? 0 : ++no)).join("")}</ul>`;
-    $("#noticeSize").addEventListener("change", (e) => { state.noticeSize = +e.target.value; renderNotice(); });
   }
 
   function renderNoticeDetail(id) {
