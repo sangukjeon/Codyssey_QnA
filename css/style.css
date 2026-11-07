@@ -595,3 +595,65 @@ main { padding-bottom: 16px; min-height: 0; }
 
 /* 로고 줄 정렬: 'Q&A 허브'와 구분선을 Codyssey 글자 기준선에 맞춤 (측정값 약 2px 아래로) */
 .brand-name, .brand-sep { position: relative; top: 2px; }
+
+/* ===== 홈: 검색 중심 ===== */
+.hero { padding: 22px 16px 18px; }
+.hero-title { margin: 0; font-size: 22px; line-height: 30px; font-weight: 700; color: var(--text-strong); }
+.hero-desc { margin: 2px 0 0; font-size: 14px; line-height: 22px; color: var(--text-secondary); }
+.hero-search { margin-top: 14px; background: var(--gray-100); }
+.hero-search:focus-within { background: var(--white); }
+.hero-chips { margin-top: 12px; gap: 6px; }
+.hero-chips .chip { height: 40px; font-weight: 600; }
+.section-title .cnt { margin-left: 4px; font-size: 15px; font-weight: 700; color: var(--primary); }
+button.more-link { background: none; }
+.doc-mark { flex-shrink: 0; width: 16px; display: grid; place-items: center; color: var(--text-tertiary); }
+.doc-mark svg { width: 16px; height: 16px; }
+mark { background: #fff1b8; color: inherit; border-radius: 3px; padding: 0 1px; }
+
+/* ===== 긴 공지 목차 ===== */
+.toc { margin: 16px 16px 0; padding: 12px 14px; border-radius: var(--r-300); background: var(--gray-50); border: 1px solid var(--divider-weak); }
+.toc h3 { margin: 0 0 4px; font-size: 13px; line-height: 20px; font-weight: 600; color: var(--text-secondary); }
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.toc button {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 40px; padding: 0 6px; border-radius: var(--r-200);
+  text-align: left; font-size: 15px; line-height: 22px; font-weight: 600; color: var(--text-primary);
+  transition: transform .1s var(--ease), background-color .1s var(--ease);
+}
+.toc button:active { transform: scale(.96); background: var(--pressed); }
+.toc-n { flex-shrink: 0; width: 22px; height: 22px; border-radius: 999px; display: grid; place-items: center; font-size: 12px; font-weight: 700; color: var(--primary); background: var(--blue-50); }
+.sub-h { scroll-margin-top: 124px; }
+.sub-h:focus { outline: none; }
+
+/* ===== 표 ===== */
+.tbl-wrap { margin: 8px 0 10px; overflow-x: auto; border: 1px solid var(--border); border-radius: var(--r-300); background: var(--white); }
+.tbl { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 21px; }
+.tbl th, .tbl td { padding: 10px 12px; text-align: left; vertical-align: top; border-top: 1px solid var(--divider-weak); }
+.tbl thead th { border-top: 0; background: var(--gray-50); font-size: 12px; line-height: 18px; font-weight: 600; color: var(--text-secondary); white-space: nowrap; }
+.tbl tbody th { font-weight: 600; color: var(--text-strong); min-width: 64px; }
+.tbl td { color: var(--text-primary); }
+.bubble .tbl { font-size: 13px; line-height: 19px; }
+.bubble .tbl th, .bubble .tbl td { padding: 8px 10px; }
+
+/* ===== PC 2단 ===== */
+@media (min-width: 1024px) {
+  .wrap { max-width: 1120px; }
+  main[data-view="single"] { max-width: 720px; margin: 0 auto; }
+  .split { display: grid; grid-template-columns: 420px minmax(0, 1fr); gap: 20px; align-items: start; }
+  .split-list { min-width: 0; }
+  .split-detail {
+    position: sticky; top: 120px; min-width: 0;
+    max-height: calc(100vh - 136px); overflow-y: auto; overscroll-behavior: contain;
+    border-radius: var(--r-400);
+  }
+  .split .back-link, .split .back-row { display: none; }
+  .split-empty {
+    display: grid; place-items: center; gap: 10px; min-height: 320px; padding: 40px 24px; text-align: center;
+    background: var(--white); border: 1px dashed var(--border); border-radius: var(--r-400); color: var(--text-secondary);
+  }
+  .split-empty .ico { width: 48px; height: 48px; border-radius: 999px; display: grid; place-items: center; background: var(--gray-100); color: var(--text-tertiary); transform: rotate(180deg); }
+  .split-empty b { font-size: 15px; font-weight: 600; }
+  .q-row[aria-current="true"] { background: var(--blue-50); }
+  .q-row[aria-current="true"] .q-text { color: var(--primary); }
+  .card[aria-current="true"] { border-color: var(--primary); background: var(--blue-50); }
+  .split .chips.scroll { flex-wrap: wrap; margin: 0; padding: 2px 0 4px; }
+}

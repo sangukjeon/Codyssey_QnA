@@ -4,14 +4,54 @@
   /* ---------- 유틸 ---------- */
   const $ = (sel, el = document) => el.querySelector(sel);
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  // "- " 로 시작하는 줄은 내어쓰기 목록으로, 빈 줄은 문단 간격으로 렌더한다
-  const paras = (text) => text.split("\n").map((l) => {
-    if (!l.trim()) return `<div class="gap"></div>`;
-    const h = l.match(/^\s*#\s+(.*)$/);
-    if (h) return `<p class="sub-h">${esc(h[1])}</p>`;
-    const m = l.match(/^\s*-\s+(.*)$/);
-    return m ? `<p class="li">${esc(m[1])}</p>` : `<p>${esc(l)}</p>`;
-  }).join("");
+  // 본문 규칙: "# 소제목", "- 목록", "| 칸 | 칸"(연속된 줄이 한 표, 첫 줄은 머리글), 빈 줄은 문단 간격
+  // withIds 가 true 면 소제목에 id(sec-1, sec-2…)를 붙여 목차에서 이동할 수 있게 한다
+  const table = (rows) => `<div class="tbl-wrap"><table class="tbl">
+    <thead><tr>${rows[0].map((c) => `<th scope="col">${esc(c)}</th>`).join("")}</tr></thead>
+    <tbody>${rows.slice(1).map((r) => `<tr>${r.map((c, j) => (j === 0 ? `<th scope="row">${esc(c)}</th>` : `<td>${esc(c)}</td>`)).join("")}</tr>`).join("")}</tbody>
+  </table></div>`;
+  const paras = (text, withIds = false) => {
+    const lines = text.split("\n");
+    let out = "", sec = 0;
+    for (let i = 0; i < lines.length; i++) {
+      const l = lines[i];
+      if (/^\s*\|/.test(l)) {
+        const rows = [];
+        while (i < lines.length && /^\s*\|/.test(lines[i])) {
+          rows.push(lines[i].trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((c) => c.trim()));
+          i++;
+        }
+        i--;
+        out += table(rows);
+        continue;
+      }
+      if (!l.trim()) { out += `<div class="gap"></div>`; continue; }
+      const h = l.match(/^\s*#\s+(.*)$/);
+      if (h) { sec++; out += `<p class="sub-h"${withIds ? ` id="sec-${sec}" tabindex="-1"` : ""}>${esc(h[1])}</p>`; continue; }
+      const m = l.match(/^\s*-\s+(.*)$/);
+      out += m ? `<p class="li">${esc(m[1])}</p>` : `<p>${esc(l)}</p>`;
+    }
+    return out;
+  };
+  // 긴 공지 목차: 소제목이 3개 이상일 때만
+  const toc = (text) => {
+    const heads = text.split("\n").map((l) => l.match(/^\s*#\s+(.*)$/)).filter(Boolean).map((m) => m[1]);
+    if (heads.length < 3) return "";
+    return `<nav class="toc" aria-label="목차"><h3>목차</h3><ol>${heads.map((h, i) =>
+      `<li><button type="button" data-sec="${i + 1}"><span class="toc-n">${i + 1}</span>${esc(h)}</button></li>`).join("")}</ol></nav>`;
+  };
+  const bindToc = (root) => root.querySelectorAll(".toc button").forEach((b) => b.addEventListener("click", () => {
+    const el = root.querySelector(`#sec-${b.dataset.sec}`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+    el.focus({ preventScroll: true });
+  }));
+  // 검색어 강조: 이미 이스케이프된 문자열에 <mark> 를 씌운다
+  const highlight = (html, query) => {
+    const words = query.trim().split(/\s+/).filter((w) => w.length >= 1).map((w) => esc(w).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+    if (!words.length) return html;
+    return html.replace(new RegExp(`(${words.join("|")})`, "gi"), "<mark>$1</mark>");
+  };
   const catName = (id) => (CATEGORIES.find((c) => c.id === id) || {}).name || "";
   const norm = (s) => s.toLowerCase().replace(/[\s\u2060]+/g, "");
 
@@ -49,7 +89,7 @@
   const catIcon = (id) => `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON.cat[id]}</svg>`;
 
   /* ---------- 상태 ---------- */
-  const state = { faqCat: "all", faqQuery: "", faqPage: 1, noticeCat: "all" };
+  const state = { faqCat: "all", faqQuery: "", faqPage: 1, noticeCat: "all", homeQuery: "" };
   const FAQ_PAGE_SIZE = 8;
   const main = $("#main");
   const sortedNotices = () => [...NOTICES].sort((a, b) => (b.pinned - a.pinned) || 0);
@@ -113,18 +153,23 @@
     const notices = sortedNotices().slice(0, 3);
     const counts = (id) => FAQS.filter((f) => f.cat === id).length;
 
+    const HOT = ["와이파이", "장학금", "출석", "시험", "동료평가", "주차", "사물함", "퍼실"];
     main.innerHTML = `
-      <section class="section panel">
-        <div class="summary">
-          <span class="summary-icon">${ICON.info}</span>
-          <div>
-            <h2>디스코드에 묻기 전에 먼저 확인해 주세요</h2>
-            <p>디스코드 공지, 오리엔테이션 자료, 시험 가이드를 바탕으로 자주 묻는 질문을 한곳에 정리했습니다.</p>
-                      </div>
+      <section class="section panel hero" aria-labelledby="h-hero">
+        <h2 class="hero-title" id="h-hero">무엇이 궁금하세요?</h2>
+        <p class="hero-desc">디스코드에 묻기 전에 질문과 공지에서 먼저 찾아보세요.</p>
+        <div class="search hero-search" role="search">
+          ${ICON.search}
+          <label class="sr-only" for="homeSearch">질문과 공지 검색</label>
+          <input id="homeSearch" type="search" enterkeyhint="search" autocomplete="off" placeholder="예: 와이파이, 장학금, 시험 시간" value="${esc(state.homeQuery)}">
+          <button class="search-clear" type="button" id="homeClear" aria-label="검색어 지우기" ${state.homeQuery ? "" : "hidden"}>${ICON.close}</button>
         </div>
-        <div class="stats"><span>정리된 질문<span class="num"><b>${FAQS.length}</b>개</span></span><span>분류<span class="num"><b>${CATEGORIES.length - 1}</b>개</span></span><span>공지<span class="num"><b>${NOTICES.length}</b>건</span></span></div>
+        <div class="chips hero-chips" role="group" aria-label="자주 찾는 키워드">
+          ${HOT.map((k) => `<button class="chip" type="button" data-q="${esc(k)}">${esc(k)}</button>`).join("")}
+        </div>
       </section>
-
+      <div id="homeResults" aria-live="polite"></div>
+      <div id="homeSections">
       <section class="section panel" aria-labelledby="h-notice">
         <div class="section-head">
           <h2 class="section-title" id="h-notice">주요 공지</h2>
@@ -152,7 +197,19 @@
           <button class="cat-tile c-${c.id}" type="button" data-cat="${c.id}">
             <span class="ico">${catIcon(c.id)}</span><b>${c.name}</b><span class="sub">질문 <em>${counts(c.id)}</em>개</span>
           </button>`).join("")}</div>
-      </section>`;
+      </section>
+      </div>`;
+
+    const hInput = $("#homeSearch"), hClear = $("#homeClear");
+    const runSearch = () => {
+      state.homeQuery = hInput.value;
+      hClear.hidden = !hInput.value;
+      drawHomeResults();
+    };
+    hInput.addEventListener("input", runSearch);
+    hClear.addEventListener("click", () => { hInput.value = ""; runSearch(); hInput.focus(); });
+    main.querySelectorAll(".hero-chips .chip").forEach((b) => b.addEventListener("click", () => { hInput.value = b.dataset.q; runSearch(); }));
+    drawHomeResults();
 
     main.querySelectorAll(".cat-tile").forEach((b) => b.addEventListener("click", () => {
       state.faqCat = b.dataset.cat; state.faqQuery = "";
@@ -160,11 +217,58 @@
     }));
   }
 
+  // 홈 검색: 질문(검색어 포함 + 챗봇 매칭)과 공지(제목·본문 포함)를 함께 찾는다
+  function searchAll(query) {
+    const words = query.trim().split(/\s+/).map(Matcher.norm).filter(Boolean);
+    if (!words.length) return { faqs: [], notices: [] };
+    const hasAll = (text) => { const t = Matcher.norm(text); return words.every((w) => t.includes(w)); };
+    const exact = FAQS.filter((f) => hasAll(f.q + f.a + f.keywords.join("")))
+      .sort((a, b) => hasAll(b.q) - hasAll(a.q));
+    const m = Matcher.rank(query, FAQS);
+    const extra = [...m.ranked.map((x) => x.f), ...m.hints].filter((f) => !exact.includes(f));
+    const faqs = [...new Set([...exact, ...extra])];
+    const notices = sortedNotices().filter((n) => hasAll(n.title + n.body))
+      .sort((a, b) => hasAll(b.title) - hasAll(a.title));
+    return { faqs, notices };
+  }
+
+  function drawHomeResults() {
+    const box = $("#homeResults"), sections = $("#homeSections");
+    const q = state.homeQuery.trim();
+    sections.hidden = !!q;
+    if (!q) { box.innerHTML = ""; return; }
+    const { faqs, notices } = searchAll(q);
+    if (!faqs.length && !notices.length) {
+      box.innerHTML = `<div class="empty"><span class="ico">${ICON.search}</span><b>'${esc(q)}'에 맞는 내용을 찾지 못했습니다</b>
+        <p>다른 말로 찾아보거나, 챗봇에 물어보세요.</p>
+        <button class="btn btn-tertiary btn-s" type="button" data-open-chat>챗봇에 물어보기</button></div>`;
+      box.querySelector("[data-open-chat]").addEventListener("click", () => openChat(q));
+      return;
+    }
+    const FAQ_MAX = 6, NOTICE_MAX = 4;
+    box.innerHTML = `
+      ${faqs.length ? `<section class="section panel" aria-labelledby="h-rf">
+        <div class="section-head"><h2 class="section-title" id="h-rf">질문 <span class="cnt">${faqs.length}</span></h2>
+          ${faqs.length > FAQ_MAX ? `<button class="more-link" type="button" data-more-faq>모두 보기 ${ICON.chevR}</button>` : ""}</div>
+        <ul class="rank-list">${faqs.slice(0, FAQ_MAX).map((f) => `<li><a class="rank-row" href="#faq/${f.id}">
+          <span class="faq-mark" aria-hidden="true">Q</span><span class="rank-q">${highlight(esc(f.q), q)}</span><span class="tag c-${f.cat}">${catName(f.cat)}</span><span class="chev">${ICON.chevR}</span>
+        </a></li>`).join("")}</ul>
+      </section>` : ""}
+      ${notices.length ? `<section class="section panel" aria-labelledby="h-rn">
+        <div class="section-head"><h2 class="section-title" id="h-rn">공지 <span class="cnt">${notices.length}</span></h2></div>
+        <ul class="rank-list">${notices.slice(0, NOTICE_MAX).map((n) => `<li><a class="rank-row" href="#notice/${n.id}">
+          <span class="doc-mark" aria-hidden="true">${ICON.doc}</span><span class="rank-q">${highlight(esc(n.title), q)}</span><span class="tag c-${n.cat}">${catName(n.cat)}</span><span class="chev">${ICON.chevR}</span>
+        </a></li>`).join("")}</ul>
+      </section>` : ""}`;
+    const more = box.querySelector("[data-more-faq]");
+    if (more) more.addEventListener("click", () => { state.faqQuery = q; state.faqCat = "all"; state.faqPage = 1; location.hash = "#faq"; });
+  }
+
   /* ---------- 화면: 자주 묻는 질문 ---------- */
-  function renderFaq() {
+  function renderFaq(root = main) {
     setChrome("faq", "자주 묻는 질문", [{ label: "자주 묻는 질문" }]);
 
-    main.innerHTML = `
+    root.innerHTML = `
       <div class="search" role="search">
         ${ICON.search}
         <label class="sr-only" for="faqSearch">질문 검색</label>
@@ -190,9 +294,9 @@
       drawFaqList();
     });
     clear.addEventListener("click", () => { input.value = ""; state.faqQuery = ""; state.faqPage = 1; clear.hidden = true; input.focus(); drawFaqList(); });
-    main.querySelectorAll(".chip[data-cat]").forEach((b) => b.addEventListener("click", () => {
+    root.querySelectorAll(".chip[data-cat]").forEach((b) => b.addEventListener("click", () => {
       state.faqCat = b.dataset.cat; state.faqPage = 1;
-      main.querySelectorAll(".chip[data-cat]").forEach((x) => x.setAttribute("aria-pressed", x === b));
+      root.querySelectorAll(".chip[data-cat]").forEach((x) => x.setAttribute("aria-pressed", x === b));
       drawFaqList();
     }));
 
@@ -216,6 +320,7 @@
       return;
     }
     box.innerHTML = `<ul class="q-list">${shown.map(faqRow).join("")}</ul>${pagination(state.faqPage, pages)}`;
+    markSelected();
     box.querySelectorAll(".pg-btn[data-page]").forEach((b) => b.addEventListener("click", () => {
       state.faqPage = +b.dataset.page;
       drawFaqList();
@@ -236,9 +341,9 @@
     </nav>`;
   }
 
-  function renderFaqDetail(id) {
+  function renderFaqDetail(id, root = main) {
     const f = FAQS.find((x) => x.id === id);
-    if (!f) return renderFaq();
+    if (!f) return root === main ? renderFaq() : (root.innerHTML = splitEmpty("질문"));
     setChrome("faq", "자주 묻는 질문", [{ label: "자주 묻는 질문", href: "#faq" }, { label: "상세" }]);
     // 이전/다음은 지금 목록(필터·검색) 기준, 목록에 없으면 전체 기준
     let list = filteredFaqs();
@@ -250,7 +355,7 @@
       ? `<a href="#faq/${x.id}"><span>${label}</span><span>${esc(x.q)}</span></a>`
       : `<a aria-disabled="true"><span>${label}</span><span>${label}이 없습니다</span></a>`;
 
-    main.innerHTML = `${backLink("#faq", "자주 묻는 질문")}
+    root.innerHTML = `${backLink("#faq", "자주 묻는 질문")}
       <article class="detail">
         <div class="detail-head">
           <div class="tag-row"><span class="tag c-${f.cat}">${catName(f.cat)}</span></div>
@@ -266,12 +371,12 @@
   /* ---------- 화면: 공지사항 ---------- */
   const filteredNotices = () => sortedNotices().filter((n) => state.noticeCat === "all" || n.cat === state.noticeCat);
 
-  function renderNotice() {
+  function renderNotice(root = main) {
     setChrome("notice", "공지사항", [{ label: "공지사항" }]);
     // 공지가 있는 분류만 칩으로 보여 준다
     const cats = CATEGORIES.filter((c) => c.id === "all" || NOTICES.some((n) => n.cat === c.id));
     if (!cats.some((c) => c.id === state.noticeCat)) state.noticeCat = "all";
-    main.innerHTML = `
+    root.innerHTML = `
       <div class="chips scroll" role="group" aria-label="분류">
         ${cats.map((c) => {
           const n = c.id === "all" ? NOTICES.length : NOTICES.filter((x) => x.cat === c.id).length;
@@ -284,34 +389,36 @@
       const list = filteredNotices();
       $("#noticeCount").innerHTML = `<b>${list.length}</b>건`;
       $("#noticeList").innerHTML = list.map(noticeCard).join("");
+      markSelected();
     };
-    main.querySelectorAll(".chip[data-cat]").forEach((b) => b.addEventListener("click", () => {
+    root.querySelectorAll(".chip[data-cat]").forEach((b) => b.addEventListener("click", () => {
       state.noticeCat = b.dataset.cat;
-      main.querySelectorAll(".chip[data-cat]").forEach((x) => x.setAttribute("aria-pressed", x === b));
+      root.querySelectorAll(".chip[data-cat]").forEach((x) => x.setAttribute("aria-pressed", x === b));
       draw();
     }));
     draw();
   }
 
-  function renderNoticeDetail(id) {
+  function renderNoticeDetail(id, root = main) {
     // 이전/다음은 지금 고른 분류 기준, 그 분류에 없으면 전체 기준
     let all = filteredNotices();
     if (!all.some((n) => n.id === id)) all = sortedNotices();
     const i = all.findIndex((n) => n.id === id);
-    if (i < 0) return renderNotice();
+    if (i < 0) return root === main ? renderNotice() : (root.innerHTML = splitEmpty("공지"));
     const n = all[i];
     setChrome("notice", "공지사항", [{ label: "공지사항", href: "#notice" }, { label: "상세" }]);
     const prev = all[i - 1], next = all[i + 1];
     const related = FAQS.filter((f) => (f.related || []).includes(n.id));
 
-    main.innerHTML = `${backLink("#notice", "공지사항")}
+    root.innerHTML = `${backLink("#notice", "공지사항")}
       <article class="detail">
         <div class="detail-head">
           <div class="tag-row">${n.pinned ? '<span class="tag">고정</span>' : ""}<span class="tag c-${n.cat}">${catName(n.cat)}</span></div>
           <h2>${esc(n.title)}</h2>
           <p class="source">출처: ${esc(sourceName(n.source))}</p>
         </div>
-        <div class="detail-body">${paras(n.body)}</div>
+        ${toc(n.body)}
+        <div class="detail-body">${paras(n.body, true)}</div>
         ${n.files.length ? `<div class="attach"><h3>첨부파일 ${n.files.length}</h3><ul>${n.files.map((f) => `<li><a href="#notice/${n.id}" onclick="return false">${ICON.file}${esc(f)}</a></li>`).join("")}</ul></div>` : ""}
         ${related.length ? `<div class="attach info"><h3>이 공지와 관련된 질문</h3><ul>${related.map((f) => `<li><a href="#faq/${f.id}">${ICON.chevR}${esc(f.q)}</a></li>`).join("")}</ul></div>` : ""}
         <ul class="pager-nav">
@@ -320,6 +427,7 @@
         </ul>
       </article>
       <div class="back-row"><a class="btn btn-tertiary btn-block" href="#notice">목록으로</a></div>`;
+    bindToc(root);
   }
 
   function moveTabBar() {
@@ -332,9 +440,42 @@
   window.addEventListener("resize", moveTabBar);
   document.fonts && document.fonts.ready.then(moveTabBar);
 
+  /* ---------- PC 2단 (넓은 화면에서 왼쪽 목록 + 오른쪽 상세) ---------- */
+  const WIDE = window.matchMedia("(min-width: 1024px)");
+  let splitKind = null;
+  const splitEmpty = (what) => `<div class="split-empty"><span class="ico">${ICON.chevR}</span>
+    <b>왼쪽에서 ${what}을 고르면 여기에 내용이 나옵니다</b></div>`;
+  // 목록에서 지금 열린 항목 표시
+  function markSelected() {
+    const h = location.hash;
+    document.querySelectorAll("#listPane .q-row, #listPane .card").forEach((a) => {
+      if (a.getAttribute("href") === h) a.setAttribute("aria-current", "true");
+      else a.removeAttribute("aria-current");
+    });
+  }
+
   /* ---------- 라우터 ---------- */
   function route() {
     const [page, id] = location.hash.replace(/^#/, "").split("/");
+    const listPage = page === "faq" || page === "notice";
+    if (WIDE.matches && listPage) {
+      // 같은 탭 안에서 항목만 바뀌면 목록은 그대로 두고 오른쪽만 다시 그린다 (목록 스크롤·검색어 유지)
+      if (splitKind !== page || !$("#listPane")) {
+        main.dataset.view = "split";
+        main.innerHTML = `<div class="split"><div class="split-list" id="listPane"></div><div class="split-detail" id="detailPane"></div></div>`;
+        splitKind = page;
+        if (page === "faq") renderFaq($("#listPane")); else renderNotice($("#listPane"));
+        window.scrollTo(0, 0);
+      }
+      const pane = $("#detailPane");
+      if (id) { if (page === "faq") renderFaqDetail(+id, pane); else renderNoticeDetail(+id, pane); }
+      else { setChrome(page, page === "faq" ? "자주 묻는 질문" : "공지사항", []); pane.innerHTML = splitEmpty(page === "faq" ? "질문" : "공지"); }
+      pane.scrollTop = 0;
+      markSelected();
+      return;
+    }
+    splitKind = null;
+    main.dataset.view = "single";
     if (page === "faq" && id) renderFaqDetail(+id);
     else if (page === "faq") renderFaq();
     else if (page === "notice" && id) renderNoticeDetail(+id);
@@ -343,6 +484,7 @@
     window.scrollTo(0, 0);
   }
   window.addEventListener("hashchange", route);
+  WIDE.addEventListener("change", () => { splitKind = null; route(); });
 
   // 탭: 클릭 + 좌우 화살표 키
   const tabs = [...document.querySelectorAll(".tab")];
