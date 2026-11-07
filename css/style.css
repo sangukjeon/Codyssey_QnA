@@ -497,3 +497,14 @@ main:focus { outline: none; }
   .chip:active, .tab:active, .icon-btn:active, .more-link:active, .chat-fab:active { transform: none; }
 }
 .search-clear[hidden] { display: none; }
+
+/* 공지 본문 소제목, 태그 줄 */
+.sub-h { margin-top: 14px !important; font-weight: 700; color: var(--text-strong); }
+.detail-body > .sub-h:first-child, .faq-a-box > .sub-h:first-child { margin-top: 0 !important; }
+.tag-row { display: flex; gap: 6px; }
+.card-meta { margin-top: 8px; }
+.rank-row .tag { flex-shrink: 0; margin-top: 0; }
+.rank-row { align-items: center; }
+.rank-row .rank-num, .rank-row .chev { margin-top: 0; }
+.faq-a-foot { justify-content: flex-end; }
+.gap + .sub-h { margin-top: 0 !important; }

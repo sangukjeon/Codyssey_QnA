@@ -16,9 +16,8 @@
       <button class="icon-btn" type="button" id="topSearch" aria-label="자주 묻는 질문 검색">
         <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m20 20-4.8-4.8"/></svg>
       </button>
-      <a class="icon-btn" href="#notice" aria-label="새 공지 3건">
+      <a class="icon-btn" href="#notice" aria-label="공지사항">
         <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22Zm7-6V11a7 7 0 0 0-5.5-6.84V3.5a1.5 1.5 0 0 0-3 0v.66A7 7 0 0 0 5 11v5l-2 2v1h18v-1l-2-2Z"/></svg>
-        <span class="count" aria-hidden="true">3</span>
       </a>
     </div>
   </header>
@@ -47,8 +46,7 @@
 
   <footer class="footer">
     <div class="wrap">
-      <p>디스코드 문의 채널에 올라온 질문을 운영진이 정리했습니다. 마지막 정리일 <span id="updatedAt"></span></p>
-      <p>이 페이지는 목업이며, 표시된 내용은 예시입니다.</p>
+      <p>디스코드 공지 채널의 공지를 정리한 페이지입니다. 내용이 다르면 디스코드 원문 공지를 따라 주세요.</p>
     </div>
   </footer>
 
@@ -79,7 +77,7 @@
     </div>
     <form class="chat-form" id="chatForm" autocomplete="off">
       <label class="sr-only" for="chatInput">질문 입력</label>
-      <input id="chatInput" type="text" placeholder="예: 지각 몇 번까지 괜찮아요?" maxlength="200">
+      <input id="chatInput" type="text" placeholder="예: 와이파이 비밀번호 알려 주세요" maxlength="200">
       <button class="btn btn-primary" type="submit" id="chatSend" aria-label="보내기" disabled>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
       </button>

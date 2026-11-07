@@ -7,6 +7,8 @@
   // "- " 로 시작하는 줄은 내어쓰기 목록으로, 빈 줄은 문단 간격으로 렌더한다
   const paras = (text) => text.split("\n").map((l) => {
     if (!l.trim()) return `<div class="gap"></div>`;
+    const h = l.match(/^\s*#\s+(.*)$/);
+    if (h) return `<p class="sub-h">${esc(h[1])}</p>`;
     const m = l.match(/^\s*-\s+(.*)$/);
     return m ? `<p class="li">${esc(m[1])}</p>` : `<p>${esc(l)}</p>`;
   }).join("");
@@ -48,9 +50,7 @@
   const state = { faqCat: "all", faqQuery: "" };
   const main = $("#main");
   const sortedNotices = () => [...NOTICES].sort((a, b) => (b.pinned - a.pinned) || 0);
-  const totalAsks = FAQS.reduce((s, f) => s + f.count, 0);
 
-  $("#updatedAt").textContent = UPDATED_AT;
 
   /* ---------- 공통 조각 ---------- */
   function setChrome(tab, title, crumbs) {
@@ -75,9 +75,9 @@
       : `<span class="card-no">No.${index}</span>`;
     return `<li><a class="card" href="#notice/${n.id}">
       ${head}
-      <div class="card-title-row"><h3 class="card-title">${esc(n.title)}</h3>${n.file ? ICON.clip : ""}</div>
+      <div class="card-title-row"><h3 class="card-title">${esc(n.title)}</h3>${n.files.length ? ICON.clip : ""}</div>
       <div class="card-meta">
-        <dl><div><dt>작성자</dt><dd>${esc(n.author)}</dd></div><div><dt>등록일</dt><dd>${n.date}</dd></div></dl>
+        <span class="tag c-${n.cat}">${catName(n.cat)}</span>
         ${ICON.chevRLg}
       </div>
     </a></li>`;
@@ -92,13 +92,13 @@
         <span class="faq-mark" aria-hidden="true">Q</span>
         <span class="faq-body-wrap">
           <span class="faq-q-text">${esc(f.q)}</span>
-          <span class="faq-sub"><span class="tag c-${f.cat}">${catName(f.cat)}</span><span class="freq">${ICON.chat}디스코드 문의 <b>${f.count}</b>회</span></span>
+          <span class="faq-sub"><span class="tag c-${f.cat}">${catName(f.cat)}</span></span>
         </span>
         ${ICON.chevD}
       </button>
       <div class="faq-a" id="faq-a-${f.id}" role="region" aria-label="답변">
         <div class="faq-a-box">${paras(f.a)}</div>
-        <div class="faq-a-foot"><span>답변 갱신 ${f.updated}</span>${link}</div>
+        ${link ? `<div class="faq-a-foot">${link}</div>` : ""}
       </div>
     </li>`;
   }
@@ -106,7 +106,7 @@
   /* ---------- 화면: 한눈에 보기 ---------- */
   function renderHome() {
     setChrome("home", "한눈에 보기", [{ label: "한눈에 보기" }]);
-    const top = [...FAQS].sort((a, b) => b.count - a.count).slice(0, 5);
+    const top = FAQS.filter((f) => f.pick).slice(0, 6);
     const notices = sortedNotices().slice(0, 3);
     const counts = (id) => FAQS.filter((f) => f.cat === id).length;
 
@@ -116,10 +116,10 @@
           <span class="summary-icon">${ICON.info}</span>
           <div>
             <h2>디스코드에 묻기 전에 먼저 확인해 주세요</h2>
-            <p>문의 채널에 반복해서 올라온 질문과 운영 공지를 한곳에 정리했습니다.</p>
+            <p>디스코드 공지 채널의 공지와, 공지에서 뽑은 자주 묻는 질문을 한곳에 정리했습니다.</p>
                       </div>
         </div>
-        <div class="stats"><span>정리된 질문<span class="num"><b>${FAQS.length}</b>개</span></span><span>누적 문의<span class="num"><b>${totalAsks}</b>건</span></span><span>공지<span class="num"><b>${NOTICES.length}</b>건</span></span></div>
+        <div class="stats"><span>정리된 질문<span class="num"><b>${FAQS.length}</b>개</span></span><span>분류<span class="num"><b>${CATEGORIES.length - 1}</b>개</span></span><span>공지<span class="num"><b>${NOTICES.length}</b>건</span></span></div>
       </section>
 
       <section class="section panel" aria-labelledby="h-notice">
@@ -133,13 +133,13 @@
       <section class="section panel" aria-labelledby="h-top">
         <div class="section-head">
           <div>
-            <h2 class="section-title" id="h-top">많이 올라온 질문 TOP 5</h2>
-            <p class="section-desc">디스코드 문의 횟수 기준</p>
+            <h2 class="section-title" id="h-top">먼저 확인할 질문</h2>
+            <p class="section-desc">교육장 생활에 바로 필요한 내용</p>
           </div>
           <a class="more-link" href="#faq">전체 보기 ${ICON.chevR}</a>
         </div>
         <ol class="rank-list">${top.map((f, i) => `<li><a class="rank-row" href="#faq/${f.id}">
-          <span class="rank-num">${i + 1}</span><span class="rank-q">${esc(f.q)}</span><span class="freq"><b>${f.count}</b>회</span><span class="chev">${ICON.chevR}</span>
+          <span class="rank-num">${i + 1}</span><span class="rank-q">${esc(f.q)}</span><span class="tag c-${f.cat}">${catName(f.cat)}</span><span class="chev">${ICON.chevR}</span>
         </a></li>`).join("")}</ol>
       </section>
 
@@ -166,7 +166,7 @@
       <div class="search" role="search">
         ${ICON.search}
         <label class="sr-only" for="faqSearch">질문 검색</label>
-        <input id="faqSearch" type="search" placeholder="궁금한 내용을 검색하세요 (예: 지각, 증명서)" value="${esc(state.faqQuery)}">
+        <input id="faqSearch" type="search" placeholder="궁금한 내용을 검색하세요 (예: 와이파이, 사물함)" value="${esc(state.faqQuery)}">
         <button class="search-clear" type="button" id="faqClear" aria-label="검색어 지우기" ${state.faqQuery ? "" : "hidden"}>${ICON.close}</button>
       </div>
       <div class="chips scroll" style="margin-top:14px" role="group" aria-label="분류">
@@ -177,7 +177,6 @@
       </div>
       <div class="list-toolbar" style="margin-top:16px">
         <span class="list-count" id="faqCount"></span>
-        <span class="list-count">문의 많은 순</span>
       </div>
       <div id="faqResult"></div>`;
 
@@ -203,13 +202,13 @@
     const list = FAQS
       .filter((f) => state.faqCat === "all" || f.cat === state.faqCat)
       .filter((f) => !q || norm(f.q + f.a).includes(q) || f.keywords.some((k) => q.includes(norm(k)) || norm(k).includes(q)))
-      .sort((a, b) => b.count - a.count);
+ ;
 
     $("#faqCount").innerHTML = `<b>${list.length}</b>건`;
     const box = $("#faqResult");
     if (!list.length) {
       box.innerHTML = `<div class="empty"><span class="ico">${ICON.search}</span><b>찾는 질문이 아직 정리되지 않았습니다</b>
-        <p>챗봇에 물어보거나 디스코드 #문의 채널에 질문해 주세요.</p>
+        <p>챗봇에 물어보거나 디스코드 allinone-문의사항 채널에 질문해 주세요.</p>
         <button class="btn btn-tertiary btn-s" type="button" data-open-chat>챗봇에 물어보기</button></div>`;
       box.querySelector("[data-open-chat]").addEventListener("click", () => openChat(state.faqQuery));
       return;
@@ -253,9 +252,8 @@
     main.innerHTML = `
       <article class="detail">
         <div class="detail-head">
-          ${n.pinned ? '<span class="tag">고정</span>' : '<span class="tag soft">공지</span>'}
+          <div class="tag-row">${n.pinned ? '<span class="tag">고정</span>' : ""}<span class="tag c-${n.cat}">${catName(n.cat)}</span></div>
           <h2>${esc(n.title)}</h2>
-          <div class="card-meta"><dl><div><dt>작성자</dt><dd>${esc(n.author)}</dd></div><div><dt>등록일</dt><dd>${n.date}</dd></div></dl></div>
         </div>
         <div class="detail-body">${paras(n.body)}</div>
         ${n.files.length ? `<div class="attach"><h3>첨부파일 ${n.files.length}</h3><ul>${n.files.map((f) => `<li><a href="#notice/${n.id}" onclick="return false">${ICON.file}${esc(f)}</a></li>`).join("")}</ul></div>` : ""}
@@ -382,7 +380,7 @@
 
   function ask(text) {
     addMsg("user", esc(text));
-    const ranked = FAQS.map((f) => ({ f, s: score(text, f) })).filter((x) => x.s > 0).sort((a, b) => b.s - a.s || b.f.count - a.f.count);
+    const ranked = FAQS.map((f) => ({ f, s: score(text, f) })).filter((x) => x.s > 0).sort((a, b) => b.s - a.s || a.f.id - b.f.id);
     const best = ranked[0] && ranked[0].f;
     const extraFaq = ranked.slice(1, 3).map((x) => x.f);
     const notes = [...new Map([...(best && best.related ? best.related.map((id) => NOTICES.find((n) => n.id === id)) : []), ...matchNotices(text)]
@@ -401,7 +399,7 @@
     } else if (notes.length) {
       html = `<p>관련된 공지를 찾았습니다.</p><div class="bubble-links">${notes.map((n) => linkBtn(`#notice/${n.id}`, n.title, ICON.doc)).join("")}</div>`;
     } else {
-      html = `<p>아직 정리된 답변을 찾지 못했습니다.</p><p>다른 단어로 다시 물어보거나, 디스코드 #문의 채널에 질문을 남겨 주세요. 운영진이 확인 후 답변하고, 자주 올라오는 질문은 이곳에 추가합니다.</p>
+      html = `<p>아직 정리된 답변을 찾지 못했습니다.</p><p>다른 단어로 다시 물어보거나, 디스코드 allinone-문의사항 채널에 질문을 남겨 주세요.</p>
         <div class="bubble-links">${linkBtn("#faq", "자주 묻는 질문 전체 보기", ICON.chevR)}${linkBtn("#notice", "공지사항 보기", ICON.doc)}</div>`;
     }
     botSay(html);
