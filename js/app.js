@@ -327,10 +327,6 @@
       n.focus(); n.click();
     });
   });
-  $("#topSearch").addEventListener("click", () => {
-    if (!location.hash.startsWith("#faq")) location.hash = "#faq";
-    setTimeout(() => $("#faqSearch") && $("#faqSearch").focus(), 0);
-  });
 
   route();
 
