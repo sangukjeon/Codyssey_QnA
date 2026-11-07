@@ -4,9 +4,21 @@
   /* ---------- 유틸 ---------- */
   const $ = (sel, el = document) => el.querySelector(sel);
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const paras = (text) => text.split("\n").map((l) => (l.trim() ? `<p>${esc(l)}</p>` : `<div class="gap"></div>`)).join("");
+  // "- " 로 시작하는 줄은 내어쓰기 목록으로, 빈 줄은 문단 간격으로 렌더한다
+  const paras = (text) => text.split("\n").map((l) => {
+    if (!l.trim()) return `<div class="gap"></div>`;
+    const m = l.match(/^\s*-\s+(.*)$/);
+    return m ? `<p class="li">${esc(m[1])}</p>` : `<p>${esc(l)}</p>`;
+  }).join("");
   const catName = (id) => (CATEGORIES.find((c) => c.id === id) || {}).name || "";
-  const norm = (s) => s.toLowerCase().replace(/\s+/g, "");
+  const norm = (s) => s.toLowerCase().replace(/[\s\u2060]+/g, "");
+
+  // 줄바꿈 정리: "입실·퇴실", "09:00~22:00", "2~3주" 처럼 붙어 있어야 읽히는 묶음이
+  // 가운뎃점·물결표 앞뒤에서 갈라지지 않도록 단어 결합 문자(U+2060)를 넣는다.
+  const WJ = "\u2060";
+  const glue = (t) => t.replace(/\s*([·~])\s*/g, (m, c) => (m.trim() === c ? `${WJ}${c}${WJ}` : m));
+  FAQS.forEach((f) => { f.q = glue(f.q); f.a = glue(f.a); });
+  NOTICES.forEach((n) => { n.title = glue(n.title); n.body = glue(n.body); });
 
   const ICON = {
     chevR: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>',
@@ -365,7 +377,7 @@
   }
   function matchNotices(text) {
     const t = norm(text);
-    return NOTICES.filter((n) => n.title.replace(/[\[\]()]/g, " ").split(/\s+/).filter((w) => w.length >= 2 && !/코디세이|안내|공지|대전/.test(w)).some((w) => t.includes(norm(w))));
+    return NOTICES.filter((n) => n.title.replace(/[\[\]()]/g, " ").split(/\s+/).filter((w) => w.length >= 3 && !/코디세이|안내|공지|대전/.test(w)).some((w) => t.includes(norm(w))));
   }
 
   function ask(text) {

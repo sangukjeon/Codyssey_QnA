@@ -48,7 +48,7 @@ html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0; font-family: var(--font); font-size: 16px; line-height: 24px;
   color: var(--text-primary); background: var(--bg);
-  word-break: keep-all; overflow-wrap: anywhere;
+  word-break: keep-all; overflow-wrap: break-word;
 }
 button, input { font: inherit; color: inherit; }
 button { cursor: pointer; background: none; border: 0; padding: 0; }
@@ -158,7 +158,7 @@ main:focus { outline: none; }
 .card-title-row { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
 .card-title {
   margin: 0; font-size: 16px; line-height: 24px; font-weight: 600; color: var(--text-strong); min-width: 0;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden;
 }
 .clip { color: var(--text-tertiary); }
 .card-meta { display: flex; align-items: center; gap: 12px; margin-top: 6px; font-size: 13px; line-height: 20px; color: var(--text-secondary); }
@@ -263,7 +263,7 @@ main:focus { outline: none; }
 .rank-row:active { transform: scale(.98); background: var(--pressed); }
 .rank-num { width: 20px; font-size: 16px; line-height: 24px; font-weight: 700; color: var(--primary); text-align: center; font-variant-numeric: tabular-nums; }
 .rank-list > li:nth-child(n+4) .rank-num { color: var(--text-tertiary); }
-.rank-q { flex: 1; min-width: 0; font-size: 16px; line-height: 24px; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rank-q { flex: 1; min-width: 0; font-size: 16px; line-height: 24px; color: var(--text-primary); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
 .rank-row .chev { color: var(--gray-400); }
 
 /* 빈 상태 */
@@ -359,13 +359,13 @@ main:focus { outline: none; }
 .bubble-links > span { font-size: 12px; line-height: 18px; font-weight: 600; color: var(--text-tertiary); }
 .bubble-link {
   display: flex; align-items: center; gap: 6px; width: 100%; min-width: 0; text-align: left;
-  height: 40px; padding: 0 12px; border-radius: var(--r-250); background: var(--gray-100);
+  min-height: 40px; padding: 9px 12px; border-radius: var(--r-250); background: var(--gray-100);
   font-size: 13px; line-height: 20px; font-weight: 600; color: var(--text-primary);
   transition: transform .1s var(--ease), background-color .1s var(--ease);
 }
 .bubble-link:first-of-type { background: var(--blue-50); color: var(--primary); }
 .bubble-link:active { transform: scale(.96); background: var(--gray-200); }
-.bubble-link span.t { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bubble-link span.t { flex: 1; min-width: 0; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
 .typing { display: inline-flex; gap: 4px; padding: 6px 2px; }
 .typing i { width: 6px; height: 6px; border-radius: 50%; background: var(--gray-400); animation: blink 1s infinite var(--ease); }
 .typing i:nth-child(2) { animation-delay: .15s; }
@@ -416,3 +416,26 @@ main:focus { outline: none; }
 .freq svg { margin-right: 4px; }
 .stats b { margin-right: 1px; }
 .back-row .btn-tertiary { background: var(--white); }
+
+/* ===== 줄바꿈 정리 =====
+ * 짧으면 한 줄 그대로, 길면 두 줄까지 보여 주고 말줄임.
+ * 제목은 줄 길이를 고르게(balance), 본문은 마지막 줄에 한 단어만 남지 않게(pretty).
+ */
+.page-title, .section-title, .summary h2, .detail-head h2, .empty b, .chat-head h2 { text-wrap: balance; }
+.faq-q-text, .bubble .bq { text-wrap: pretty; }
+.summary p, .faq-a-box p, .detail-body p, .bubble p, .empty p, .section-desc, .card-title, .rank-q { text-wrap: pretty; }
+.card-title-row { align-items: flex-start; }
+.card-title-row .clip { margin-top: 3px; }
+.rank-row { align-items: flex-start; }
+.rank-row .rank-num, .rank-row .freq, .rank-row .chev { margin-top: 3px; }
+.rank-row .rank-num { margin-top: 0; }
+.bubble-link { align-items: flex-start; }
+.bubble-link svg { margin-top: 3px; }
+/* "- " 목록 줄은 내어쓰기 */
+.li { position: relative; padding-left: 14px; }
+.li::before { content: ""; position: absolute; left: 3px; top: .72em; width: 4px; height: 4px; border-radius: 50%; background: currentColor; opacity: .6; }
+.detail-body .li + .li, .faq-a-box .li + .li { margin-top: 2px; }
+/* 메타 정보는 항목 단위로만 줄바꿈 */
+.card-meta dl div, .faq-a-foot > *, .stats .num { white-space: nowrap; }
+.chat-head p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chat-head > div { min-width: 0; }
