@@ -592,3 +592,6 @@ main { padding-bottom: 16px; min-height: 0; }
 .notice-box b { color: var(--text-strong); font-weight: 700; }
 
 .detail-head .source { margin: 8px 0 0; font-size: 12px; line-height: 18px; color: var(--text-tertiary); }
+
+/* 로고 줄 정렬: 'Q&A 허브'와 구분선을 Codyssey 글자 기준선에 맞춤 (측정값 약 2px 아래로) */
+.brand-name, .brand-sep { position: relative; top: 2px; }
