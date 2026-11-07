@@ -547,3 +547,9 @@ main:focus { outline: none; }
 
 /* 상단 아이콘 줄 제거 후 헤더 위 여백 */
 .page-head { padding-top: 24px; }
+
+/* 로고: 누르면 한눈에 보기(메인) */
+.logo { display: inline-flex; margin: -6px 0 8px -6px; padding: 6px; border-radius: var(--r-300); transition: transform .1s var(--ease); }
+.logo img { display: block; width: 64px; height: auto; }
+.logo:active { transform: scale(.92); }
+.page-head { padding-top: 16px; }
