@@ -47,7 +47,7 @@
   const catIcon = (id) => `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON.cat[id]}</svg>`;
 
   /* ---------- 상태 ---------- */
-  const state = { faqCat: "all", faqQuery: "", faqPage: 1 };
+  const state = { faqCat: "all", faqQuery: "", faqPage: 1, noticeCat: "all" };
   const FAQ_PAGE_SIZE = 8;
   const main = $("#main");
   const sortedNotices = () => [...NOTICES].sort((a, b) => (b.pinned - a.pinned) || 0);
@@ -70,15 +70,11 @@
     ).join("");
   }
 
-  function noticeCard(n, index) {
-    const head = n.pinned
-      ? `<span class="tag">고정</span>`
-      : `<span class="card-no">No.${index}</span>`;
+  function noticeCard(n) {
     return `<li><a class="card" href="#notice/${n.id}">
-      ${head}
       <div class="card-title-row"><h3 class="card-title">${esc(n.title)}</h3>${n.files.length ? ICON.clip : ""}</div>
       <div class="card-meta">
-        <span class="tag c-${n.cat}">${catName(n.cat)}</span>
+        <span class="tag-row">${n.pinned ? '<span class="tag">고정</span>' : ""}<span class="tag c-${n.cat}">${catName(n.cat)}</span></span>
         ${ICON.chevRLg}
       </div>
     </a></li>`;
@@ -123,7 +119,7 @@
           <h2 class="section-title" id="h-notice">주요 공지</h2>
           <a class="more-link" href="#notice">전체 보기 ${ICON.chevR}</a>
         </div>
-        <ul class="card-list">${notices.map((n) => noticeCard(n, sortedNotices().filter((x) => !x.pinned).indexOf(n) + 1)).join("")}</ul>
+        <ul class="card-list">${notices.map(noticeCard).join("")}</ul>
       </section>
 
       <section class="section panel" aria-labelledby="h-top">
@@ -135,7 +131,7 @@
           <a class="more-link" href="#faq">전체 보기 ${ICON.chevR}</a>
         </div>
         <ol class="rank-list">${top.map((f, i) => `<li><a class="rank-row" href="#faq/${f.id}">
-          <span class="rank-num">${i + 1}</span><span class="rank-q">${esc(f.q)}</span><span class="tag c-${f.cat}">${catName(f.cat)}</span><span class="chev">${ICON.chevR}</span>
+          <span class="faq-mark" aria-hidden="true">Q</span><span class="rank-q">${esc(f.q)}</span><span class="tag c-${f.cat}">${catName(f.cat)}</span><span class="chev">${ICON.chevR}</span>
         </a></li>`).join("")}</ol>
       </section>
 
@@ -257,20 +253,39 @@
   }
 
   /* ---------- 화면: 공지사항 ---------- */
+  const filteredNotices = () => sortedNotices().filter((n) => state.noticeCat === "all" || n.cat === state.noticeCat);
+
   function renderNotice() {
     setChrome("notice", "공지사항", [{ label: "공지사항" }]);
-    const all = sortedNotices();
-    const shown = all;
-    let no = 0;
+    // 공지가 있는 분류만 칩으로 보여 준다
+    const cats = CATEGORIES.filter((c) => c.id === "all" || NOTICES.some((n) => n.cat === c.id));
+    if (!cats.some((c) => c.id === state.noticeCat)) state.noticeCat = "all";
     main.innerHTML = `
-      <div class="list-toolbar">
-        <span class="list-count">전체 <b>${all.length}</b>건</span>
+      <div class="chips scroll" role="group" aria-label="분류">
+        ${cats.map((c) => {
+          const n = c.id === "all" ? NOTICES.length : NOTICES.filter((x) => x.cat === c.id).length;
+          return `<button class="chip" type="button" data-cat="${c.id}" aria-pressed="${state.noticeCat === c.id}">${c.name}<span class="n">${n}</span></button>`;
+        }).join("")}
       </div>
-      <ul class="card-list">${shown.map((n) => noticeCard(n, n.pinned ? 0 : ++no)).join("")}</ul>`;
+      <div class="list-toolbar" style="margin-top:16px"><span class="list-count" id="noticeCount"></span></div>
+      <ul class="card-list" id="noticeList"></ul>`;
+    const draw = () => {
+      const list = filteredNotices();
+      $("#noticeCount").innerHTML = `<b>${list.length}</b>건`;
+      $("#noticeList").innerHTML = list.map(noticeCard).join("");
+    };
+    main.querySelectorAll(".chip[data-cat]").forEach((b) => b.addEventListener("click", () => {
+      state.noticeCat = b.dataset.cat;
+      main.querySelectorAll(".chip[data-cat]").forEach((x) => x.setAttribute("aria-pressed", x === b));
+      draw();
+    }));
+    draw();
   }
 
   function renderNoticeDetail(id) {
-    const all = sortedNotices();
+    // 이전/다음은 지금 고른 분류 기준, 그 분류에 없으면 전체 기준
+    let all = filteredNotices();
+    if (!all.some((n) => n.id === id)) all = sortedNotices();
     const i = all.findIndex((n) => n.id === id);
     if (i < 0) return renderNotice();
     const n = all[i];
