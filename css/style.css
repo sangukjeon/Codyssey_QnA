@@ -553,3 +553,31 @@ main:focus { outline: none; }
 .logo img { display: block; width: 64px; height: auto; }
 .logo:active { transform: scale(.92); }
 .page-head { padding-top: 16px; }
+
+/* ===== 헤더 개편: 로고 줄 + 탭, 위에 붙어 따라옴 ===== */
+.head { position: sticky; top: 0; z-index: 30; background: var(--white); border-bottom: 1px solid var(--border); }
+.brand-row { display: flex; align-items: center; height: 56px; }
+.logo {
+  display: inline-flex; align-items: center; gap: 10px; margin: 0 0 0 -8px; padding: 8px;
+  border-radius: var(--r-300); text-decoration: none; color: var(--text-strong);
+}
+.logo img { width: auto; height: 22px; }
+.brand-sep { width: 1px; height: 14px; background: var(--border); }
+.brand-name { font-size: 16px; line-height: 24px; font-weight: 700; color: var(--text-strong); }
+.tabs { margin-top: 0; gap: 0; }
+.tab { flex: 1; height: 48px; padding: 0 4px; text-align: center; }
+main { padding-top: 16px; }
+
+/* 상세 화면 위 '목록으로' */
+.back-link {
+  display: inline-flex; align-items: center; gap: 2px; min-height: 44px; margin: -8px 0 4px -6px; padding: 0 8px 0 2px;
+  border-radius: var(--r-300); font-size: 15px; font-weight: 600; color: var(--text-secondary); text-decoration: none;
+  transition: transform .1s var(--ease);
+}
+.back-link:active { transform: scale(.92); background: var(--pressed); }
+
+@media (min-width: 641px) {
+  .tab { flex: 0 0 auto; padding: 0 16px; }
+  .tabs { gap: 8px; margin-left: -16px; }
+}
+.q-row .faq-mark { align-self: center; }

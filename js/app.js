@@ -64,11 +64,11 @@
     moveTabBar();
     $("#pageTitle").textContent = title;
     document.title = `${title} | 코디세이 Q&A 허브`;
-    const home = '<li><a href="#home" aria-label="홈"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3 3 10.5V21h6v-6h6v6h6V10.5z"/></svg></a></li>';
-    $("#crumbs").innerHTML = home + crumbs.map((c, i) =>
-      i === crumbs.length - 1 ? `<li><span aria-current="page">${esc(c.label)}</span></li>` : `<li><a href="${c.href}">${esc(c.label)}</a></li>`
-    ).join("");
   }
+
+  // 상세 화면 맨 위 '목록으로' 링크
+  const backLink = (href, label) =>
+    `<a class="back-link" href="${href}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>${esc(label)}</a>`;
 
   function noticeCard(n) {
     return `<li><a class="card" href="#notice/${n.id}">
@@ -239,7 +239,7 @@
       ? `<a href="#faq/${x.id}"><span>${label}</span><span>${esc(x.q)}</span></a>`
       : `<a aria-disabled="true"><span>${label}</span><span>${label}이 없습니다</span></a>`;
 
-    main.innerHTML = `
+    main.innerHTML = `${backLink("#faq", "자주 묻는 질문")}
       <article class="detail">
         <div class="detail-head">
           <div class="tag-row"><span class="tag c-${f.cat}">${catName(f.cat)}</span></div>
@@ -293,7 +293,7 @@
     const prev = all[i - 1], next = all[i + 1];
     const related = FAQS.filter((f) => (f.related || []).includes(n.id));
 
-    main.innerHTML = `
+    main.innerHTML = `${backLink("#notice", "공지사항")}
       <article class="detail">
         <div class="detail-head">
           <div class="tag-row">${n.pinned ? '<span class="tag">고정</span>' : ""}<span class="tag c-${n.cat}">${catName(n.cat)}</span></div>
