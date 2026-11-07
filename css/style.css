@@ -582,3 +582,10 @@ main { padding-top: 16px; }
 }
 .q-row .faq-mark { align-self: center; }
 .chat:focus { outline: none; }
+
+/* 하단 여백 줄이고 비공식 안내 */
+main { padding-bottom: 16px; min-height: 0; }
+.footer { padding: 8px 0 88px; } /* 챗봇 버튼(56px + 16px)에 글이 가리지 않을 만큼만 */
+.notice-box { padding: 14px 16px; border-radius: var(--r-300); background: var(--white); border: 1px solid var(--border); font-size: 13px; line-height: 20px; color: var(--text-secondary); }
+.notice-box p + p { margin-top: 4px; }
+.notice-box b { color: var(--text-strong); font-weight: 700; }
