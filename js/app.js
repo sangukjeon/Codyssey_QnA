@@ -359,7 +359,10 @@
       botSay(`<p>안녕하세요. 코디세이 Q&amp;A 안내 챗봇입니다.</p><p>디스코드에 자주 올라온 질문과 공지에서 답을 찾아 드립니다. 궁금한 내용을 입력하거나 아래 추천 질문을 눌러 주세요.</p>`, 0);
     }
     if (prefill) { input.value = prefill; send.disabled = false; }
-    setTimeout(() => input.focus(), 50);
+    // 휴대폰에서는 입력창에 바로 포커스하면 키보드가 자동으로 올라와 시트를 가리므로,
+    // 마우스·키보드 환경에서만 입력창에, 휴대폰에서는 시트 자체에 포커스한다.
+    const touch = window.matchMedia("(pointer: coarse)").matches;
+    setTimeout(() => (touch && !prefill ? chat.focus({ preventScroll: true }) : input.focus()), 50);
   }
   function closeChat() {
     chat.classList.remove("open"); scrim.classList.remove("open");

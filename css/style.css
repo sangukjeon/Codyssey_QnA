@@ -581,3 +581,4 @@ main { padding-top: 16px; }
   .tabs { gap: 8px; margin-left: -16px; }
 }
 .q-row .faq-mark { align-self: center; }
+.chat:focus { outline: none; }
