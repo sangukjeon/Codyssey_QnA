@@ -19,6 +19,9 @@
 - 공지 추가: `NOTICES` 배열에 항목 추가 (`pinned: true`면 상단 고정, 배열 순서대로 표시)
 - 본문 작성: `# 소제목`, `- 목록`, 빈 줄은 문단 간격
 
+## 배포할 때
+`css/style.css`, `js/data.js`, `js/app.js`를 고치면 `index.html`의 `?v=` 값도 함께 바꿔 주세요. 그래야 휴대폰 브라우저가 예전 파일을 캐시에서 다시 쓰지 않습니다.
+
 ## 로컬 미리보기
 ```bash
 python3 -m http.server 8000
