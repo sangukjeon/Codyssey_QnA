@@ -47,7 +47,8 @@
   const catIcon = (id) => `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON.cat[id]}</svg>`;
 
   /* ---------- 상태 ---------- */
-  const state = { faqCat: "all", faqQuery: "" };
+  const state = { faqCat: "all", faqQuery: "", faqPage: 1 };
+  const FAQ_PAGE_SIZE = 8;
   const main = $("#main");
   const sortedNotices = () => [...NOTICES].sort((a, b) => (b.pinned - a.pinned) || 0);
 
@@ -83,24 +84,19 @@
     </a></li>`;
   }
 
-  function faqItem(f, open) {
-    const notes = (f.related || []).map((id) => NOTICES.find((n) => n.id === id)).filter(Boolean);
-    const link = notes.length
-      ? `<a href="#notice/${notes[0].id}">관련 공지 보기 ${ICON.chevR}</a>` : "";
-    return `<li class="faq-item" id="faq-${f.id}">
-      <button class="faq-q" type="button" aria-expanded="${open}" aria-controls="faq-a-${f.id}">
-        <span class="faq-mark" aria-hidden="true">Q</span>
-        <span class="faq-body-wrap">
-          <span class="faq-q-text">${esc(f.q)}</span>
-          <span class="faq-sub"><span class="tag c-${f.cat}">${catName(f.cat)}</span></span>
-        </span>
-        ${ICON.chevD}
-      </button>
-      <div class="faq-a" id="faq-a-${f.id}" role="region" aria-label="답변">
-        <div class="faq-a-box">${paras(f.a)}</div>
-        ${link ? `<div class="faq-a-foot">${link}</div>` : ""}
-      </div>
-    </li>`;
+  function faqRow(f) {
+    return `<li><a class="q-row" href="#faq/${f.id}">
+      <span class="faq-mark" aria-hidden="true">Q</span>
+      <span class="q-body"><span class="q-text">${esc(f.q)}</span><span class="tag c-${f.cat}">${catName(f.cat)}</span></span>
+      <span class="chev">${ICON.chevR}</span>
+    </a></li>`;
+  }
+
+  function filteredFaqs() {
+    const q = norm(state.faqQuery);
+    return FAQS
+      .filter((f) => state.faqCat === "all" || f.cat === state.faqCat)
+      .filter((f) => !q || norm(f.q + f.a).includes(q) || f.keywords.some((k) => q.includes(norm(k)) || norm(k).includes(q)));
   }
 
   /* ---------- 화면: 한눈에 보기 ---------- */
@@ -158,9 +154,8 @@
   }
 
   /* ---------- 화면: 자주 묻는 질문 ---------- */
-  function renderFaq(openId) {
+  function renderFaq() {
     setChrome("faq", "자주 묻는 질문", [{ label: "자주 묻는 질문" }]);
-    if (openId) { state.faqCat = "all"; state.faqQuery = ""; }
 
     main.innerHTML = `
       <div class="search" role="search">
@@ -183,26 +178,26 @@
     const input = $("#faqSearch");
     const clear = $("#faqClear");
     input.addEventListener("input", () => {
-      state.faqQuery = input.value;
+      state.faqQuery = input.value; state.faqPage = 1;
       clear.hidden = !input.value;
       drawFaqList();
     });
-    clear.addEventListener("click", () => { input.value = ""; state.faqQuery = ""; clear.hidden = true; input.focus(); drawFaqList(); });
+    clear.addEventListener("click", () => { input.value = ""; state.faqQuery = ""; state.faqPage = 1; clear.hidden = true; input.focus(); drawFaqList(); });
     main.querySelectorAll(".chip[data-cat]").forEach((b) => b.addEventListener("click", () => {
-      state.faqCat = b.dataset.cat;
+      state.faqCat = b.dataset.cat; state.faqPage = 1;
       main.querySelectorAll(".chip[data-cat]").forEach((x) => x.setAttribute("aria-pressed", x === b));
       drawFaqList();
     }));
 
-    drawFaqList(openId);
+    drawFaqList();
   }
 
-  function drawFaqList(openId) {
-    const q = norm(state.faqQuery);
-    const list = FAQS
-      .filter((f) => state.faqCat === "all" || f.cat === state.faqCat)
-      .filter((f) => !q || norm(f.q + f.a).includes(q) || f.keywords.some((k) => q.includes(norm(k)) || norm(k).includes(q)))
- ;
+  function drawFaqList() {
+    const list = filteredFaqs();
+    const pages = Math.max(1, Math.ceil(list.length / FAQ_PAGE_SIZE));
+    state.faqPage = Math.min(state.faqPage, pages);
+    const from = (state.faqPage - 1) * FAQ_PAGE_SIZE;
+    const shown = list.slice(from, from + FAQ_PAGE_SIZE);
 
     $("#faqCount").innerHTML = `<b>${list.length}</b>건`;
     const box = $("#faqResult");
@@ -213,18 +208,52 @@
       box.querySelector("[data-open-chat]").addEventListener("click", () => openChat(state.faqQuery));
       return;
     }
-    box.innerHTML = `<ul class="faq-list">${list.map((f) => faqItem(f, f.id === openId)).join("")}</ul>`;
-    box.querySelectorAll(".faq-q").forEach((b) => b.addEventListener("click", () => {
-      b.setAttribute("aria-expanded", b.getAttribute("aria-expanded") !== "true");
+    box.innerHTML = `<ul class="q-list">${shown.map(faqRow).join("")}</ul>${pagination(state.faqPage, pages)}`;
+    box.querySelectorAll(".pg-btn[data-page]").forEach((b) => b.addEventListener("click", () => {
+      state.faqPage = +b.dataset.page;
+      drawFaqList();
+      $("#faqCount").scrollIntoView({ block: "start" });
+      window.scrollBy(0, -72);
     }));
-    if (openId) {
-      const el = $(`#faq-${openId}`);
-      if (el) {
-        el.classList.add("flash");
-        requestAnimationFrame(() => el.scrollIntoView({ block: "center" }));
-        setTimeout(() => el.classList.remove("flash"), 1600);
-      }
-    }
+  }
+
+  function pagination(cur, pages) {
+    if (pages <= 1) return "";
+    const prev = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>';
+    const nums = Array.from({ length: pages }, (_, i) => i + 1).map((n) =>
+      `<button class="pg-btn${n === cur ? " on" : ""}" type="button" data-page="${n}" ${n === cur ? 'aria-current="page"' : ""} aria-label="${n}쪽">${n}</button>`).join("");
+    return `<nav class="pagination" aria-label="페이지">
+      <button class="pg-btn" type="button" ${cur > 1 ? `data-page="${cur - 1}"` : "disabled"} aria-label="이전 쪽">${prev}</button>
+      ${nums}
+      <button class="pg-btn" type="button" ${cur < pages ? `data-page="${cur + 1}"` : "disabled"} aria-label="다음 쪽">${ICON.chevR}</button>
+    </nav>`;
+  }
+
+  function renderFaqDetail(id) {
+    const f = FAQS.find((x) => x.id === id);
+    if (!f) return renderFaq();
+    setChrome("faq", "자주 묻는 질문", [{ label: "자주 묻는 질문", href: "#faq" }, { label: "상세" }]);
+    // 이전/다음은 지금 목록(필터·검색) 기준, 목록에 없으면 전체 기준
+    let list = filteredFaqs();
+    if (!list.some((x) => x.id === id)) list = FAQS;
+    const i = list.findIndex((x) => x.id === id);
+    const prev = list[i - 1], next = list[i + 1];
+    const notes = (f.related || []).map((nid) => NOTICES.find((n) => n.id === nid)).filter(Boolean);
+    const nav = (x, label) => x
+      ? `<a href="#faq/${x.id}"><span>${label}</span><span>${esc(x.q)}</span></a>`
+      : `<a aria-disabled="true"><span>${label}</span><span>${label}이 없습니다</span></a>`;
+
+    main.innerHTML = `
+      <article class="detail">
+        <div class="detail-head">
+          <div class="tag-row"><span class="tag c-${f.cat}">${catName(f.cat)}</span></div>
+          <h2><span class="faq-mark" aria-hidden="true">Q</span> ${esc(f.q)}</h2>
+        </div>
+        <div class="detail-body"><div class="faq-a-box">${paras(f.a)}</div></div>
+        ${notes.length ? `<div class="attach info"><h3>근거 공지</h3><ul>${notes.map((n) => `<li><a href="#notice/${n.id}">${ICON.doc}${esc(n.title)}</a></li>`).join("")}</ul></div>` : ""}
+        <ul class="pager-nav"><li>${nav(prev, "이전 질문")}</li><li>${nav(next, "다음 질문")}</li></ul>
+      </article>
+      <div class="back-row"><a class="btn btn-tertiary btn-block" href="#faq">목록으로</a></div>`;
   }
 
   /* ---------- 화면: 공지사항 ---------- */
@@ -279,11 +308,12 @@
   /* ---------- 라우터 ---------- */
   function route() {
     const [page, id] = location.hash.replace(/^#/, "").split("/");
-    if (page === "faq") renderFaq(id ? +id : null);
+    if (page === "faq" && id) renderFaqDetail(+id);
+    else if (page === "faq") renderFaq();
     else if (page === "notice" && id) renderNoticeDetail(+id);
     else if (page === "notice") renderNotice();
     else renderHome();
-    if (!(page === "faq" && id)) window.scrollTo(0, 0);
+    window.scrollTo(0, 0);
   }
   window.addEventListener("hashchange", route);
 
