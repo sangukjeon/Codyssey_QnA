@@ -9,6 +9,7 @@
   <link rel="icon" href="assets/favicon-32.png?v=1" sizes="32x32" type="image/png">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=1">
   <meta name="theme-color" content="#ffffff">
+  <link rel="manifest" href="manifest.webmanifest">
   <meta property="og:title" content="코디세이 Q&amp;A 허브 (비공식)">
   <meta property="og:description" content="디스코드 공지와 자주 묻는 질문을 한곳에 정리한 비공식 페이지">
   <meta property="og:image" content="https://sangukjeon.github.io/Codyssey_QnA/assets/logo-512.png">
@@ -88,5 +89,9 @@
 
   <script src="js/data.js?v=20261107-4"></script>
   <script src="js/app.js?v=20261107-4"></script>
+  <script>
+    // 설치(앱으로 추가) 지원용 서비스 워커 — 캐시는 하지 않는다
+    if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+  </script>
 </body>
 </html>
