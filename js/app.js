@@ -195,7 +195,7 @@
         <div class="section-head"><h2 class="section-title" id="h-cat">분류별로 찾기</h2></div>
         <div class="cat-grid">${CATEGORIES.filter((c) => c.id !== "all").map((c) => `
           <button class="cat-tile c-${c.id}" type="button" data-cat="${c.id}">
-            <span class="ico">${catIcon(c.id)}</span><b>${c.name}</b><span class="sub">질문 <em>${counts(c.id)}</em>개</span>
+            <span class="ico">${catIcon(c.id)}</span><span class="tx"><b>${c.name}</b><span class="sub">질문 <em>${counts(c.id)}</em>개</span></span>
           </button>`).join("")}</div>
       </section>
       </div>`;
@@ -480,7 +480,7 @@
     else if (page === "faq") renderFaq();
     else if (page === "notice" && id) renderNoticeDetail(+id);
     else if (page === "notice") renderNotice();
-    else renderHome();
+    else { renderHome(); main.dataset.view = "home"; }
     window.scrollTo(0, 0);
   }
   window.addEventListener("hashchange", route);

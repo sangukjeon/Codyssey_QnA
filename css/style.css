@@ -657,3 +657,38 @@ mark { background: #fff1b8; color: inherit; border-radius: 3px; padding: 0 1px; 
   .card[aria-current="true"] { border-color: var(--primary); background: var(--blue-50); }
   .split .chips.scroll { flex-wrap: wrap; margin: 0; padding: 2px 0 4px; }
 }
+
+/* ===== PC 홈: 한 화면에 나란히 ===== */
+@media (min-width: 1024px) {
+  main[data-view="home"] { max-width: none; }
+  /* 검색 영역: 왼쪽 제목, 오른쪽 검색창, 아래 키워드 */
+  .hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); column-gap: 32px; align-items: center; padding: 22px 24px; }
+  .hero-title, .hero-desc { grid-column: 1; }
+  .hero-search { grid-column: 2; grid-row: 1 / span 2; margin-top: 0; }
+  .hero-chips { grid-column: 1 / -1; margin-top: 14px; }
+  /* 주요 공지 | 먼저 확인할 질문 | 분류별로 찾기 */
+  #homeSections { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: stretch; margin-top: 12px; }
+  #homeSections > .section { margin-top: 0; }
+  #homeSections .card { padding: 12px 0; }
+  #homeSections .rank-row { padding: 10px 8px; }
+  #homeSections .rank-q { font-size: 15px; line-height: 22px; }
+  /* 분류 타일: 아이콘 옆에 이름 */
+  #homeSections .cat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  #homeSections .cat-tile { flex-direction: row; align-items: center; gap: 10px; padding: 10px 12px; }
+  #homeSections .cat-tile .ico { width: 32px; height: 32px; flex-shrink: 0; }
+  #homeSections .cat-tile .ico svg { width: 18px; height: 18px; }
+  #homeSections .cat-tile b { display: block; font-size: 14px; line-height: 20px; }
+  #homeSections .cat-tile .sub { display: block; margin-top: 0; }
+  /* 검색 결과: 질문 | 공지 나란히 */
+  #homeResults:has(.section + .section) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: start; margin-top: 12px; }
+  #homeResults:has(.section + .section) > .section { margin-top: 0; }
+}
+
+/* 분류 타일 글자 묶음 (이름 + 질문 수) */
+.cat-tile .tx { display: block; min-width: 0; }
+.cat-tile .tx b { display: block; }
+.cat-tile .tx .sub { display: block; margin-top: 0; }
+#homeSections[hidden] { display: none !important; }
+@media (min-width: 1024px) {
+  #homeSections .section-head { align-items: flex-start; min-height: 44px; }
+}
