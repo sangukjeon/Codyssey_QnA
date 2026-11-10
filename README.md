@@ -119,6 +119,22 @@ node tests/chatbot-eval.js holdout   # 조정에 쓰지 않은 확인용 질문 
 
 <br>
 
+## 방문 통계
+
+[Umami](https://umami.is) 로 익명 방문 통계를 모읍니다. **쿠키를 쓰지 않고 개인을 식별하지 않으며, 챗봇에 입력한 문장은 저장하지 않습니다.** 실제 사이트 주소(`sangukjeon.github.io`)에서만 수집하고, 로컬 실행 중에는 기록되지 않습니다.
+
+| 기록 | 내용 |
+| --- | --- |
+| 화면 조회 | `/`, `/faq/24`, `/notice/12` 처럼 화면마다 (상세는 질문·공지 제목 함께) → 방문자 수, 이탈률, 머문 시간, 유입 경로, 기기 |
+| `search` | 홈 검색어(30자까지)와 질문·공지 결과 수 |
+| `keyword-chip` · `category` | 키워드 칩, 분류 칩·타일 클릭 |
+| `chat-open` · `chat-suggestion` · `chat-ask` · `chat-link` | 챗봇 열기, 추천 질문 클릭, 질문 결과(answer / hint / notice / none)와 연결된 질문 번호, 답변 속 링크 클릭 |
+| `logo-reset` · `app-install` | 로고로 처음 화면 돌아가기, 앱 설치 |
+
+`chat-ask`에서 `result: none`이 많은 시간대·화면을 보면 챗봇이 놓치는 질문 유형을 짐작할 수 있습니다. 통계 코드는 `js/analytics.js`에 있습니다.
+
+<br>
+
 ## 직접 실행하기
 
 ```bash
@@ -140,6 +156,7 @@ index.html               화면 뼈대, 링크 미리보기 정보
 css/style.css            디자인 토큰과 컴포넌트 스타일
 js/data.js               공지·질문 데이터 (내용 수정은 여기만)
 js/matcher.js            챗봇 질문 매칭
+js/analytics.js          방문 통계 (Umami)
 js/app.js                화면 그리기, 검색, 목차·표, PC 2단, 챗봇
 tests/                   챗봇 정확도 평가 도구와 질문 모음
 assets/                  로고, 아이콘, 링크 미리보기 이미지

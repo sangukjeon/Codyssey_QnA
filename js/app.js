@@ -201,17 +201,28 @@
       </div>`;
 
     const hInput = $("#homeSearch"), hClear = $("#homeClear");
+    let searchTimer;
     const runSearch = () => {
       state.homeQuery = hInput.value;
       hClear.hidden = !hInput.value;
       drawHomeResults();
+      clearTimeout(searchTimer);
+      const q = hInput.value.trim();
+      if (q) searchTimer = setTimeout(() => {
+        const r = searchAll(q);
+        Analytics.event("search", { q: q.slice(0, 30), faqs: r.faqs.length, notices: r.notices.length });
+      }, 1200);
     };
     hInput.addEventListener("input", runSearch);
     hClear.addEventListener("click", () => { hInput.value = ""; runSearch(); hInput.focus(); });
-    main.querySelectorAll(".hero-chips .chip").forEach((b) => b.addEventListener("click", () => { hInput.value = b.dataset.q; runSearch(); }));
+    main.querySelectorAll(".hero-chips .chip").forEach((b) => b.addEventListener("click", () => {
+      Analytics.event("keyword-chip", { keyword: b.dataset.q });
+      hInput.value = b.dataset.q; runSearch();
+    }));
     drawHomeResults();
 
     main.querySelectorAll(".cat-tile").forEach((b) => b.addEventListener("click", () => {
+      Analytics.event("category", { cat: b.dataset.cat, from: "home" });
       state.faqCat = b.dataset.cat; state.faqQuery = "";
       location.hash = "#faq";
     }));
@@ -242,7 +253,7 @@
       box.innerHTML = `<div class="empty"><span class="ico">${ICON.search}</span><b>'${esc(q)}'에 맞는 내용을 찾지 못했습니다</b>
         <p>다른 말로 찾아보거나, 챗봇에 물어보세요.</p>
         <button class="btn btn-tertiary btn-s" type="button" data-open-chat>챗봇에 물어보기</button></div>`;
-      box.querySelector("[data-open-chat]").addEventListener("click", () => openChat(q));
+      box.querySelector("[data-open-chat]").addEventListener("click", () => { Analytics.event("chat-open", { from: "home-empty" }); openChat(q); });
       return;
     }
     const FAQ_MAX = 6, NOTICE_MAX = 4;
@@ -296,6 +307,7 @@
     clear.addEventListener("click", () => { input.value = ""; state.faqQuery = ""; state.faqPage = 1; clear.hidden = true; input.focus(); drawFaqList(); });
     root.querySelectorAll(".chip[data-cat]").forEach((b) => b.addEventListener("click", () => {
       state.faqCat = b.dataset.cat; state.faqPage = 1;
+      Analytics.event("category", { cat: b.dataset.cat, from: "faq" });
       root.querySelectorAll(".chip[data-cat]").forEach((x) => x.setAttribute("aria-pressed", x === b));
       drawFaqList();
     }));
@@ -316,7 +328,7 @@
       box.innerHTML = `<div class="empty"><span class="ico">${ICON.search}</span><b>찾는 질문이 아직 정리되지 않았습니다</b>
         <p>챗봇에 물어보거나 디스코드 allinone-문의사항 채널에 질문해 주세요.</p>
         <button class="btn btn-tertiary btn-s" type="button" data-open-chat>챗봇에 물어보기</button></div>`;
-      box.querySelector("[data-open-chat]").addEventListener("click", () => openChat(state.faqQuery));
+      box.querySelector("[data-open-chat]").addEventListener("click", () => { Analytics.event("chat-open", { from: "faq-empty" }); openChat(state.faqQuery); });
       return;
     }
     box.innerHTML = `<ul class="q-list">${shown.map(faqRow).join("")}</ul>${pagination(state.faqPage, pages)}`;
@@ -393,6 +405,7 @@
     };
     root.querySelectorAll(".chip[data-cat]").forEach((b) => b.addEventListener("click", () => {
       state.noticeCat = b.dataset.cat;
+      Analytics.event("category", { cat: b.dataset.cat, from: "notice" });
       root.querySelectorAll(".chip[data-cat]").forEach((x) => x.setAttribute("aria-pressed", x === b));
       draw();
     }));
@@ -455,7 +468,16 @@
   }
 
   /* ---------- 라우터 ---------- */
+  // 화면을 그린 뒤 통계에 조회 기록 (#faq/24 → /faq/24)
   function route() {
+    renderRoute();
+    // 상세 화면은 통계에서 알아보기 쉽게 질문·공지 제목을 함께 남긴다
+    const [pg, id] = location.hash.replace(/^#/, "").split("/");
+    const item = id && (pg === "faq" ? FAQS.find((f) => f.id === +id) : pg === "notice" ? NOTICES.find((n) => n.id === +id) : null);
+    const title = item ? `${pg === "faq" ? "Q. " + item.q : item.title}`.replace(/\u2060/g, "") : document.title;
+    Analytics.page(location.hash, title);
+  }
+  function renderRoute() {
     const [page, id] = location.hash.replace(/^#/, "").split("/");
     const listPage = page === "faq" || page === "notice";
     if (WIDE.matches && listPage) {
@@ -484,7 +506,7 @@
     window.scrollTo(0, 0);
   }
   window.addEventListener("hashchange", route);
-  WIDE.addEventListener("change", () => { splitKind = null; route(); });
+  WIDE.addEventListener("change", () => { splitKind = null; renderRoute(); });
 
   // 탭: 클릭 + 좌우 화살표 키
   const tabs = [...document.querySelectorAll(".tab")];
@@ -500,6 +522,7 @@
   // 로고: 홈 검색어를 비우고 한눈에 보기 첫 화면으로 (이미 홈이면 hashchange 가 안 생기므로 직접 다시 그림)
   $(".logo").addEventListener("click", (e) => {
     state.homeQuery = "";
+    Analytics.event("logo-reset");
     const h = location.hash;
     if (h === "#home" || h === "" || h === "#") { e.preventDefault(); route(); }
   });
@@ -531,7 +554,7 @@
   }
   window.openChat = openChat;
 
-  fab.addEventListener("click", () => openChat());
+  fab.addEventListener("click", () => { Analytics.event("chat-open", { from: "button" }); openChat(); });
   $("#chatClose").addEventListener("click", closeChat);
   scrim.addEventListener("click", closeChat);
   document.addEventListener("keydown", (e) => {
@@ -547,7 +570,8 @@
 
   $("#chatChips").innerHTML = CHAT_SUGGESTIONS.map((s) => `<button class="chip" type="button">${esc(s)}</button>`).join("");
   $("#chatChips").addEventListener("click", (e) => {
-    const b = e.target.closest(".chip"); if (b) ask(b.textContent);
+    const b = e.target.closest(".chip");
+    if (b) { Analytics.event("chat-suggestion", { text: b.textContent }); ask(b.textContent); }
   });
   input.addEventListener("input", () => { send.disabled = !input.value.trim(); });
   form.addEventListener("submit", (e) => {
@@ -604,11 +628,17 @@
         <div class="bubble-links">${linkBtn("#faq", "자주 묻는 질문 전체 보기", ICON.chevR)}${linkBtn("#notice", "공지사항 보기", ICON.doc)}</div>`;
     }
     botSay(html);
+    // 챗봇 결과만 기록 (입력 문장은 기록하지 않음)
+    Analytics.event("chat-ask", {
+      result: best ? "answer" : m.hints.length ? "hint" : notes.length ? "notice" : "none",
+      faq: best ? best.id : 0,
+    });
   }
 
   log.addEventListener("click", (e) => {
     const b = e.target.closest(".bubble-link"); if (!b) return;
     const href = b.dataset.href;
+    Analytics.event("chat-link", { to: href.replace(/^#/, "/") });
     if (location.hash === href) route(); else location.hash = href;
     if (window.matchMedia("(max-width: 1023px)").matches) closeChat();
   });
