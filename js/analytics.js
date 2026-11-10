@@ -45,9 +45,9 @@ const Analytics = (() => {
   const send = (fn, label) => (ready() ? run(fn, label) : queue.push([fn, label]));
   const flush = () => { while (ready() && queue.length) { const [fn, label] = queue.shift(); run(fn, label); } };
 
-  const tag = document.getElementById("umami");
+  const tag = document.getElementById("umami-script");
   if (tag) {
-    tag.addEventListener("load", () => { stat.script = ready() ? "정상 로드" : "로드됐지만 umami 없음 (수집 제외 주소일 수 있음)"; flush(); show(); });
+    tag.addEventListener("load", () => { stat.script = ready() ? "정상 로드" : "로드됐지만 umami 없음 (차단 앱이 빈 파일로 바꿨을 수 있음)"; flush(); show(); });
     tag.addEventListener("error", () => { stat.script = "차단됨 (광고·추적 차단 확인)"; show(); });
   }
   window.addEventListener("load", () => { flush(); show(); });
