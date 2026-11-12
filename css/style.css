@@ -692,3 +692,23 @@ mark { background: #fff1b8; color: inherit; border-radius: 3px; padding: 0 1px; 
 @media (min-width: 1024px) {
   #homeSections .section-head { align-items: flex-start; min-height: 44px; }
 }
+
+/* ===== 링크 복사 ===== */
+.head-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.copy-link {
+  display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; height: 32px; padding: 0 10px; margin: -4px -4px -4px 0;
+  border-radius: 999px; border: 1px solid var(--border); background: var(--white);
+  font-size: 13px; line-height: 20px; font-weight: 600; color: var(--text-secondary);
+  transition: transform .1s var(--ease), background-color .1s var(--ease);
+}
+.copy-link::before { content: ""; position: absolute; inset: -6px 0; }
+.copy-link { position: relative; }
+.copy-link:active { transform: scale(.92); background: var(--pressed); }
+.copy-link.done { color: var(--success); border-color: var(--success); }
+.toast {
+  position: fixed; left: 50%; bottom: 88px; z-index: 70; transform: translate(-50%, 12px); opacity: 0; pointer-events: none;
+  max-width: calc(100% - 32px); padding: 10px 16px; border-radius: var(--r-300);
+  background: var(--gray-1000); color: #fff; font-size: 14px; line-height: 20px; font-weight: 600;
+  box-shadow: var(--shadow-float); transition: opacity .2s var(--ease), transform .2s var(--ease);
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }

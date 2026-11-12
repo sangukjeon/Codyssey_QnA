@@ -74,6 +74,8 @@
     file: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 12v6M9 15l3 3 3-3"/></svg>',
     info: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="8" r="1.15" fill="currentColor" stroke="none"/></svg>',
     bot: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 4v4M9.5 16.5h5"/><circle cx="9" cy="13" r="1.15" fill="currentColor" stroke="none"/><circle cx="15" cy="13" r="1.15" fill="currentColor" stroke="none"/></svg>',
+    link: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
+    check: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>',
     doc: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>',
     cat: {
       attend: '<path d="M8 2v4M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18M9 16l2 2 4-4"/>',
@@ -116,6 +118,44 @@
     EXAM: "시험 기능 학습자 가이드",
   };
   const sourceName = (k) => SOURCES[k] || "디스코드 allinone-공지사항 채널";
+
+  /* ---------- 링크 복사 ---------- */
+  const COPY_LABEL = "링크 복사";
+  const copyBtn = (hash) => `<button class="copy-link" type="button" data-copy="${hash}" aria-label="이 화면 링크 복사">${ICON.link}<span>${COPY_LABEL}</span></button>`;
+  // 주소창의 ?stats-debug 같은 값은 빼고 깔끔한 주소만 복사
+  const shareUrl = (hash) => `${location.origin}${location.pathname}${hash}`;
+  async function copyText(text) {
+    try { await navigator.clipboard.writeText(text); return true; } catch (e) { /* 아래 예비 방식 */ }
+    const ta = document.createElement("textarea");
+    ta.value = text; ta.setAttribute("readonly", ""); ta.style.cssText = "position:fixed;top:0;left:0;opacity:0";
+    document.body.appendChild(ta); ta.select();
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    ta.remove();
+    return ok;
+  }
+  let toastEl, toastTimer;
+  function toast(msg) {
+    if (!toastEl) {
+      toastEl = document.createElement("div");
+      toastEl.className = "toast"; toastEl.setAttribute("role", "status"); toastEl.setAttribute("aria-live", "polite");
+      document.body.appendChild(toastEl);
+    }
+    toastEl.textContent = msg;
+    toastEl.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove("show"), 2200);
+  }
+  document.addEventListener("click", async (e) => {
+    const b = e.target.closest(".copy-link"); if (!b) return;
+    const hash = b.dataset.copy;
+    const ok = await copyText(shareUrl(hash));
+    Analytics.event("copy-link", { to: hash.replace(/^#/, "/"), ok });
+    if (!ok) { toast("복사하지 못했습니다. 주소창의 링크를 복사해 주세요."); return; }
+    toast("링크를 복사했습니다");
+    b.classList.add("done"); b.innerHTML = `${ICON.check}<span>복사됨</span>`;
+    setTimeout(() => { b.classList.remove("done"); b.innerHTML = `${ICON.link}<span>${COPY_LABEL}</span>`; }, 2000);
+  });
 
   // 상세 화면 맨 위 '목록으로' 링크
   const backLink = (href, label) =>
@@ -370,7 +410,7 @@
     root.innerHTML = `${backLink("#faq", "자주 묻는 질문")}
       <article class="detail">
         <div class="detail-head">
-          <div class="tag-row"><span class="tag c-${f.cat}">${catName(f.cat)}</span></div>
+          <div class="head-row"><div class="tag-row"><span class="tag c-${f.cat}">${catName(f.cat)}</span></div>${copyBtn(`#faq/${f.id}`)}</div>
           <h2><span class="faq-mark" aria-hidden="true">Q</span> ${esc(f.q)}</h2>
         </div>
         <div class="detail-body"><div class="faq-a-box">${paras(f.a)}</div></div>
@@ -426,7 +466,7 @@
     root.innerHTML = `${backLink("#notice", "공지사항")}
       <article class="detail">
         <div class="detail-head">
-          <div class="tag-row">${n.pinned ? '<span class="tag">고정</span>' : ""}<span class="tag c-${n.cat}">${catName(n.cat)}</span></div>
+          <div class="head-row"><div class="tag-row">${n.pinned ? '<span class="tag">고정</span>' : ""}<span class="tag c-${n.cat}">${catName(n.cat)}</span></div>${copyBtn(`#notice/${n.id}`)}</div>
           <h2>${esc(n.title)}</h2>
           <p class="source">출처: ${esc(sourceName(n.source))}</p>
         </div>
