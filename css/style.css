@@ -486,6 +486,7 @@ main:focus { outline: none; }
 .c-facility { --c-bg: #ffefe0; --c-ic: #f07800; --c-tx: #8a4300; }
 .c-admin    { --c-bg: #fdeaf0; --c-ic: #e0577a; --c-tx: #8f2e48; }
 .c-rules    { --c-bg: #eef0ff; --c-ic: #5b5fd6; --c-tx: #34379a; }
+.c-apply    { --c-bg: #e0f6f7; --c-ic: #0f9aa8; --c-tx: #0b5e66; }
 .c-etc      { --c-bg: #f2f3f8; --c-ic: #697383; --c-tx: #4a5667; }
 .tag[class*="c-"] { background: var(--c-bg); color: var(--c-tx); }
 .cat-tile[class*="c-"] .ico { background: var(--c-bg); color: var(--c-ic); }
@@ -712,3 +713,6 @@ mark { background: #fff1b8; color: inherit; border-radius: 3px; padding: 0 1px; 
   box-shadow: var(--shadow-float); transition: opacity .2s var(--ease), transform .2s var(--ease);
 }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* 질문 답변 출처 */
+.faq-src { margin: 10px 2px 0; font-size: 12px; line-height: 18px; color: var(--text-tertiary); }

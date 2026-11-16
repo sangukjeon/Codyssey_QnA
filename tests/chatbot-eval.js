@@ -13,7 +13,8 @@ for (const f of ["js/data.js", "js/matcher.js"]) {
   // const 로 선언된 전역도 context 에서 보이도록 var 로 바꿔 실행
   vm.runInContext(fs.readFileSync(path.join(root, f), "utf8").replace(/^const /gm, "var "), ctx, { filename: f });
 }
-const cases = require(process.argv[2] === "holdout" ? "./chatbot-holdout.js" : "./chatbot-cases.js");
+const SETS = { holdout: "./chatbot-holdout.js", real: "./chatbot-real.js", "real-holdout": "./chatbot-real-holdout.js" };
+const cases = require(SETS[process.argv[2]] || "./chatbot-cases.js");
 
 let ok = 0, hinted = 0;
 const fails = [];

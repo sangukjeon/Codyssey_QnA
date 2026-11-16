@@ -85,6 +85,7 @@
       admin: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v4a2 2 0 0 0 2 2h4M10 9H8M16 13H8M16 17H8"/>',
       admin: '<rect width="20" height="14" x="2" y="5" rx="2"/><path d="M2 10h20M6 15h4"/>',
       rules: '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/>',
+      apply: '<path d="M2 21a8 8 0 0 1 13.29-6"/><circle cx="10" cy="8" r="5"/><path d="m16 19 2 2 4-4"/>',
       etc: '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><circle cx="12" cy="17" r="1.15" fill="currentColor" stroke="none"/>',
     },
   };
@@ -413,7 +414,7 @@
           <div class="head-row"><div class="tag-row"><span class="tag c-${f.cat}">${catName(f.cat)}</span></div>${copyBtn(`#faq/${f.id}`)}</div>
           <h2><span class="faq-mark" aria-hidden="true">Q</span> ${esc(f.q)}</h2>
         </div>
-        <div class="detail-body"><div class="faq-a-box">${paras(f.a)}</div></div>
+        <div class="detail-body"><div class="faq-a-box">${paras(f.a)}</div>${f.src ? `<p class="faq-src">출처: ${esc(f.src)}</p>` : ""}</div>
         ${notes.length ? `<div class="attach info"><h3>근거 공지</h3><ul>${notes.map((n) => `<li><a href="#notice/${n.id}">${ICON.doc}${esc(n.title)}</a></li>`).join("")}</ul></div>` : ""}
         <ul class="pager-nav"><li>${nav(prev, "이전 질문")}</li><li>${nav(next, "다음 질문")}</li></ul>
       </article>

@@ -28,7 +28,8 @@ const Matcher = (() => {
     [["카톡", "카카오톡"], "카톡"],
     [["편의점", "외출", "나갔다", "나갔다와"], "외출"],
     [["차가져", "차끌고", "자차", "차량", "차타고"], "주차"],
-    [["밤에", "밤늦", "새벽", "늦게까지", "밤까지"], "심야"],
+    [["밤에", "밤늦", "늦게까지", "밤까지"], "심야"],
+    [["퇴근처리", "출근처리", "퇴근찍", "출근찍", "퇴근", "출근"], "출결"],
     [["깔아", "깔면", "깔기", "깔아도"], "설치"],
     [["내노트북", "내컴퓨터", "개인pc", "내pc", "개인노트북", "노트북가져"], "개인노트북"],
     [["못써", "못쓰", "사용못", "이용못"], "못쓰"],
@@ -40,7 +41,7 @@ const Matcher = (() => {
 
   // 거의 모든 질문에 나오는 말: 키워드로 맞아도 점수를 아주 조금만 준다
   const GENERIC = new Set(["안되", "안돼", "되나", "돼", "언제", "어디", "방법", "어떻게", "확인", "문의", "가능",
-    "있나", "해도", "뭐", "시간", "교육장", "시험", "다시", "이용", "인정", "기록", "질문", "도움", "결과", "입력", "이름", "몇시", "차"].map(norm));
+    "있나", "해도", "뭐", "시간", "교육장", "시험", "네이토", "노트북", "인터넷", "신청", "변경", "수정", "동료평가", "층", "출입", "다시", "이용", "인정", "기록", "질문", "도움", "결과", "입력", "이름", "몇시", "차"].map(norm));
 
   // 글자 두 개 묶음 중 뜻이 없는 것(어미 등)은 비교에서 뺀다
   const STOP_BI = new Set(["어떻", "떻게", "나요", "해요", "되나", "있나", "인가", "가요", "을까", "는데", "하나", "해야",
@@ -73,12 +74,18 @@ const Matcher = (() => {
   };
 
   const MIN_SCORE = 3;   // 이 점수 이상이면 바로 답한다
+  const BIGRAM_ONLY_SCORE = 4.5; // 키워드 없이 글자 조각만 겹칠 때 바로 답하는 점수 (조각 3개)
   const HINT_SCORE = 2;   // 이 점수 이상이면 "혹시 이 질문인가요?" 후보로 보여 준다
 
   function score(t, qbi, f) {
     const p = prep(f);
     let kw = 0;
-    for (const k of p.kws) if (t.includes(k)) kw += GENERIC.has(k) ? 0.5 : Math.min(k.length, 4) + 1;
+    // 맞은 키워드 중 다른 맞은 키워드 안에 들어 있는 짧은 것은 빼고 센다 (예: '퍼실'과 '퍼실리테이터')
+    const hit = p.kws.filter((k) => t.includes(k));
+    for (const k of hit) {
+      if (hit.some((o) => o !== k && o.length > k.length && o.includes(k))) continue;
+      kw += GENERIC.has(k) ? 0.5 : Math.min(k.length, 4) + 1;
+    }
     let bi = 0;
     for (const b of qbi) if (p.bi.has(b)) bi += 1.5;
     return { kw, total: kw + bi };
@@ -91,7 +98,8 @@ const Matcher = (() => {
     const all = faqs
       .map((f) => ({ f, ...score(t, qbi, f) }))
       .sort((a, b) => b.total - a.total || b.kw - a.kw || a.f.id - b.f.id);
-    const ranked = all.filter((x) => x.total >= MIN_SCORE);
+    // 키워드가 하나도 안 맞고 글자 조각만 겹친 경우는 더 높은 점수(BIGRAM_ONLY_SCORE)를 넘어야 바로 답한다
+    const ranked = all.filter((x) => x.total >= MIN_SCORE && (x.kw > 0 || x.total >= BIGRAM_ONLY_SCORE));
     const hints = ranked.length ? [] : all.filter((x) => x.total >= HINT_SCORE).slice(0, 3).map((x) => x.f);
     return { best: ranked[0] ? ranked[0].f : null, others: ranked.slice(1, 3).map((x) => x.f), hints, ranked };
   }
