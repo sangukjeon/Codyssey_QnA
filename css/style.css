@@ -867,3 +867,44 @@ button.q-row { text-align: left; }
 .sched-row .dday { grid-area: dday; justify-self: start; }
 .sched-body { grid-area: body; align-self: start; }
 .sched-row .chev { grid-area: chev; }
+
+/* ===== 긴 목록 줄이기: 분류별 '더 보기', 공지 '더 보기', '맨 위로' ===== */
+.q-group { scroll-margin-top: 4.5rem; }
+.more-li { list-style: none; }
+.more-row {
+  display: flex; align-items: center; justify-content: center; gap: 4px; width: calc(100% + 32px); margin: 0 -16px;
+  min-height: 3.25rem; padding: 10px 16px; border-radius: 0 0 15px 15px;
+  font-size: 1rem; line-height: 1.4; font-weight: 600; color: var(--primary); text-align: center;
+  transition: background-color .1s var(--ease);
+}
+.more-row:active { background: var(--pressed); }
+.more-row .faq-chev { flex-shrink: 0; color: var(--primary); }
+.more-row[aria-expanded="true"] .faq-chev { transform: rotate(180deg); }
+
+.more-btn {
+  display: flex; align-items: center; justify-content: center; gap: 4px; width: 100%; margin-top: 10px;
+  min-height: 3.25rem; padding: 10px 16px; border-radius: var(--r-400); border: 1px solid var(--border); background: var(--white);
+  box-shadow: var(--shadow-sm); font-size: 1rem; line-height: 1.4; font-weight: 600; color: var(--primary);
+  transition: transform .1s var(--ease), background-color .1s var(--ease);
+}
+.more-btn:active { transform: scale(.98); background: var(--gray-50); }
+.more-btn .faq-chev { flex-shrink: 0; color: var(--primary); }
+
+.to-top {
+  position: fixed; right: 16px; bottom: 84px; z-index: 39; /* 챗봇 버튼(아래 16px + 56px) 위 */
+  display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 8px 16px 8px 12px; border-radius: 999px;
+  border: 1px solid var(--line-input); background: var(--white); color: var(--text-strong); box-shadow: var(--shadow-float);
+  font-size: 1rem; line-height: 1.4; font-weight: 600; white-space: nowrap;
+  opacity: 0; visibility: hidden; transform: translateY(8px);
+  transition: opacity .2s var(--ease), transform .2s var(--ease), visibility .2s;
+}
+.to-top.show { opacity: 1; visibility: visible; transform: none; }
+.to-top.show:active { transform: scale(.92); }
+.footer { padding-bottom: 140px; } /* 맨 끝에서 '맨 위로'와 챗봇 버튼이 안내 글을 가리지 않게 */
+@media (min-width: 1024px) {
+  .q-group { scroll-margin-top: 80px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .to-top, .more-btn, .more-row { transition: none; }
+  .more-btn:active, .to-top.show:active { transform: none; }
+}

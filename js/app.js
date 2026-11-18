@@ -92,7 +92,10 @@
   const catIcon = (id) => `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON.cat[id]}</svg>`;
 
   /* ---------- 상태 ---------- */
-  const state = { faqCat: "all", faqQuery: "", noticeCat: "all", noticeQuery: "", homeQuery: "" };
+  // faqOpen: 전체 보기에서 '더 보기'로 펼친 분류, noticeAll: 공지 '더 보기'를 눌렀는지
+  const state = { faqCat: "all", faqQuery: "", noticeCat: "all", noticeQuery: "", homeQuery: "", faqOpen: new Set(), noticeAll: false };
+  // 긴 목록은 앞부분만 보여 주고 '더 보기'로 펼친다 (스크롤을 줄이려고)
+  const FAQ_PREVIEW = 3, NOTICE_PREVIEW = 8;
   const main = $("#main");
   const sortedNotices = () => [...NOTICES].sort((a, b) => (b.pinned - a.pinned) || 0);
   let pendingScroll = null; // 화면을 그린 뒤 보이도록 스크롤할 요소 (예: #faq/24 로 열린 질문)
@@ -200,16 +203,16 @@
   }
 
   // 질문 줄 — PC 2단 목록: 누르면 오른쪽에 상세
-  function faqRow(f, { tag = true } = {}) {
-    return `<li><a class="q-row" href="#faq/${f.id}">
+  function faqRow(f, { tag = true, attrs = "" } = {}) {
+    return `<li${attrs}><a class="q-row" href="#faq/${f.id}">
       <span class="faq-mark" aria-hidden="true">Q</span>
       <span class="q-body"><span class="q-text">${esc(f.q)}</span>${tag ? `<span class="tag c-${f.cat}">${catName(f.cat)}</span>` : ""}</span>
       <span class="chev">${ICON.chevR}</span>
     </a></li>`;
   }
   // 질문 줄 — 휴대폰: 누르면 그 자리에서 답이 펼쳐진다
-  function faqItem(f, { tag = true } = {}) {
-    return `<li class="q-item" id="q-${f.id}">
+  function faqItem(f, { tag = true, attrs = "" } = {}) {
+    return `<li class="q-item" id="q-${f.id}"${attrs}>
       <h3 class="q-h"><button class="q-row" type="button" id="qb-${f.id}" aria-expanded="false" aria-controls="qa-${f.id}" data-id="${f.id}">
         <span class="faq-mark" aria-hidden="true">Q</span>
         <span class="q-body"><span class="q-text">${esc(f.q)}</span>${tag ? `<span class="tag c-${f.cat}">${catName(f.cat)}</span>` : ""}</span>
@@ -449,6 +452,8 @@
       drawFaqList();
     }));
     $("#faqResult").addEventListener("click", (e) => {
+      const more = e.target.closest("button.more-row");
+      if (more) { toggleGroup(more); return; }
       const b = e.target.closest("button.q-row");
       if (b) toggleFaq(b);
     });
@@ -472,15 +477,53 @@
     }
     const row = (f, opts) => (linkMode ? faqRow(f, opts) : faqItem(f, opts));
     // 전체 + 검색어 없음: 분류별로 묶어 보여 준다 (분류 이름이 제목이라 줄마다 태그는 빼고)
+    // 분류마다 앞의 3개만 보이고 나머지는 '더 보기'로 그 자리에서 펼친다. 분류를 고르거나 검색하면 전부 보인다
     const grouped = state.faqCat === "all" && !state.faqQuery.trim();
+    if (grouped) {
+      // 주소로 연 질문(#faq/24)이 뒤쪽에 있으면 그 분류는 펼쳐 둔다
+      const cur = FAQS.find((f) => location.hash === `#faq/${f.id}`);
+      if (cur) state.faqOpen.add(cur.cat);
+    }
     box.innerHTML = grouped
       ? CATEGORIES.filter((c) => c.id !== "all").map((c) => {
-          const items = list.filter((f) => f.cat === c.id);
-          return items.length ? `<h2 class="q-group">${c.name}<span class="n">${items.length}</span></h2>
-            <ul class="q-list">${items.map((f) => row(f, { tag: false })).join("")}</ul>` : "";
+          // '먼저 확인할 질문'(pick)을 앞으로
+          const items = list.filter((f) => f.cat === c.id).sort((a, b) => (b.pick ? 1 : 0) - (a.pick ? 1 : 0));
+          if (!items.length) return "";
+          const foldable = items.length > FAQ_PREVIEW + 1; // 하나만 숨길 거면 그냥 다 보여 준다
+          const open = !foldable || state.faqOpen.has(c.id);
+          const rows = items.map((f, i) => row(f, { tag: false, attrs: foldable && i >= FAQ_PREVIEW ? ` data-extra${open ? "" : " hidden"}` : "" })).join("");
+          const more = foldable ? `<li class="more-li"><button class="more-row" type="button" data-group="${c.id}" aria-expanded="${open}" aria-controls="ql-${c.id}"><span class="t">${groupMoreLabel(c.id, items.length - FAQ_PREVIEW, open)}</span>${ICON.chevD}</button></li>` : "";
+          return `<h2 class="q-group" id="g-${c.id}">${c.name}<span class="n">${items.length}</span></h2>
+            <ul class="q-list" id="ql-${c.id}">${rows}${more}</ul>`;
         }).join("")
       : `<ul class="q-list">${list.map((f) => row(f, { tag: state.faqCat === "all" })).join("")}</ul>`;
     markSelected();
+  }
+
+  const groupMoreLabel = (cat, n, open) => (open ? `${catName(cat)} 질문 접기` : `${catName(cat)} 질문 ${n}개 더 보기`);
+
+  // 분류 '더 보기' / '접기'
+  function toggleGroup(btn, { focus = true } = {}) {
+    const cat = btn.dataset.group, open = btn.getAttribute("aria-expanded") !== "true";
+    const ul = $(`#ql-${cat}`), extra = [...ul.querySelectorAll("li[data-extra]")];
+    if (!open) {
+      // 접히는 질문의 답이 펼쳐져 있으면 먼저 닫는다
+      const openBtn = ul.querySelector('li[data-extra] button.q-row[aria-expanded="true"]');
+      if (openBtn) toggleFaq(openBtn, false);
+    }
+    extra.forEach((li) => { li.hidden = !open; });
+    if (open) state.faqOpen.add(cat); else state.faqOpen.delete(cat);
+    btn.setAttribute("aria-expanded", String(open));
+    btn.querySelector(".t").textContent = groupMoreLabel(cat, extra.length, open);
+    if (open) {
+      // 키보드로 누른 경우 새로 보인 첫 질문으로 이어서 읽을 수 있게
+      if (focus) extra[0]?.querySelector(".q-row")?.focus({ preventScroll: true });
+      Analytics.event("faq-more", { cat });
+    } else {
+      // 접으면서 분류 제목이 화면 위로 사라졌으면 제목이 보이게 올린다
+      const h = $(`#g-${cat}`);
+      if (h.getBoundingClientRect().top < $(".head").getBoundingClientRect().bottom) h.scrollIntoView({ block: "start" });
+    }
   }
 
   // 휴대폰 질문 펼치기/접기. 한 번에 하나만 열고, 주소도 #faq/24 로 맞춰 링크 공유·새로고침이 되게 한다
@@ -554,7 +597,18 @@
         bindEmptyChat(box, "notice-empty", q);
         return;
       }
-      box.innerHTML = `<ul class="card-list" id="noticeList">${list.map((n) => noticeCard(n, { summary: true, q })).join("")}</ul>`;
+      // 검색하지 않을 때는 앞의 8개만 보여 주고 '더 보기'로 나머지를 펼친다 (주소로 연 공지가 뒤쪽이면 처음부터 펼침)
+      if (list.findIndex((n) => location.hash === `#notice/${n.id}`) >= NOTICE_PREVIEW) state.noticeAll = true;
+      const cut = !q && !state.noticeAll && list.length > NOTICE_PREVIEW + 2;
+      const shown = cut ? list.slice(0, NOTICE_PREVIEW) : list;
+      box.innerHTML = `<ul class="card-list" id="noticeList">${shown.map((n) => noticeCard(n, { summary: true, q })).join("")}</ul>
+        ${cut ? `<button class="more-btn" type="button" id="noticeMore"><span>공지 ${list.length - NOTICE_PREVIEW}개 더 보기</span>${ICON.chevD}</button>` : ""}`;
+      if (cut) $("#noticeMore").addEventListener("click", () => {
+        state.noticeAll = true;
+        draw();
+        $("#noticeList").children[NOTICE_PREVIEW]?.querySelector("a")?.focus({ preventScroll: true });
+        Analytics.event("notice-more");
+      });
       markSelected();
     };
     const input = $("#noticeSearch"), clear = $("#noticeClear");
@@ -666,6 +720,12 @@
       const pane = $("#detailPane");
       if (id) { if (page === "faq") renderFaqDetail(+id, pane); else renderNoticeDetail(+id, pane); }
       else { setChrome(page, page === "faq" ? "자주 묻는 질문" : "공지사항"); pane.innerHTML = splitEmpty(page === "faq" ? "질문" : "공지"); }
+      // 오른쪽에 연 항목(비슷한 질문·이전/다음 등)이 왼쪽 목록의 접힌 부분에 있으면 펼쳐서 보이게
+      if (id) {
+        const a = $(`#listPane [href="#${page}/${id}"]`);
+        if (page === "faq" && a && a.closest("li").hidden) toggleGroup(a.closest("ul").querySelector(".more-row"), { focus: false });
+        if (page === "notice" && !a && !state.noticeAll) { state.noticeAll = true; renderNotice($("#listPane")); }
+      }
       pane.scrollTop = 0;
       markSelected();
       return;
@@ -733,14 +793,24 @@
   $("#chatClose").addEventListener("click", closeChat);
 
   // 챗봇 버튼이 글을 가리지 않게: 아래로 읽는 동안은 비켜 있고, 위로 올리거나 맨 끝에 닿으면 다시 나온다
+  // '맨 위로'는 한 화면 넘게 내려왔을 때, 위로 올리거나 맨 끝에 닿으면 챗봇 버튼 위에 나타난다
+  const toTop = $("#toTop");
   let lastY = window.scrollY;
   window.addEventListener("scroll", () => {
     const y = window.scrollY, dy = y - lastY;
     if (Math.abs(dy) < 6) return;
     const atEnd = window.innerHeight + y >= document.documentElement.scrollHeight - 40;
     fab.classList.toggle("tucked", dy > 0 && y > 120 && !atEnd);
+    toTop.classList.toggle("show", y > window.innerHeight * 1.2 && (dy < 0 || atEnd));
     lastY = y;
   }, { passive: true });
+  toTop.addEventListener("click", () => {
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    window.scrollTo({ top: 0, behavior: still ? "auto" : "smooth" });
+    toTop.classList.remove("show");
+    main.focus({ preventScroll: true }); // 키보드 사용자는 본문 처음부터 이어서
+    Analytics.event("to-top", { page: location.hash.split("/")[0] || "#home" });
+  });
 
   // 화면 아래 안내에 내용 업데이트 날짜
   $("#updated").textContent = `내용 업데이트: ${fmtDate(UPDATED)}`;
