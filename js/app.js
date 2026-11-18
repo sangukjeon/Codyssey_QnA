@@ -92,10 +92,10 @@
   const catIcon = (id) => `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON.cat[id]}</svg>`;
 
   /* ---------- 상태 ---------- */
-  // faqOpen: 전체 보기에서 '더 보기'로 펼친 분류, noticeAll: 공지 '더 보기'를 눌렀는지
-  const state = { faqCat: "all", faqQuery: "", noticeCat: "all", noticeQuery: "", homeQuery: "", faqOpen: new Set(), noticeAll: false };
-  // 긴 목록은 앞부분만 보여 주고 '더 보기'로 펼친다 (스크롤을 줄이려고)
-  const FAQ_PREVIEW = 3, NOTICE_PREVIEW = 8;
+  // faqCat: 질문 분류 ("top" = 먼저 확인할 질문), noticePage: 공지 목록 몇 쪽인지, noticeSeen: 마지막으로 연 공지
+  const state = { faqCat: "top", faqQuery: "", noticeCat: "all", noticeQuery: "", homeQuery: "", noticePage: 1, noticeSeen: null };
+  // 공지 목록은 한 쪽에 10개씩, 아래 쪽 번호로 넘겨 본다 (스크롤을 줄이려고)
+  const NOTICE_PAGE = 10;
   const main = $("#main");
   const sortedNotices = () => [...NOTICES].sort((a, b) => (b.pinned - a.pinned) || 0);
   let pendingScroll = null; // 화면을 그린 뒤 보이도록 스크롤할 요소 (예: #faq/24 로 열린 질문)
@@ -181,19 +181,10 @@
     if (b) b.addEventListener("click", () => { Analytics.event("chat-open", { from }); openChat(q); });
   };
 
-  // 공지 본문 첫 문장 (본문이 소제목·목록·표로 시작하면 요약하지 않는다)
-  const summaryOf = (body) => {
-    const first = body.split("\n").find((l) => l.trim());
-    if (!first || /^\s*[#|-]/.test(first)) return "";
-    const m = first.trim().match(/^.+?[다요]\.(?=\s|$)/);
-    return m ? m[0] : "";
-  };
-
-  function noticeCard(n, { summary = false, q = "" } = {}) {
-    const sum = summary ? summaryOf(n.body) : "";
+  // 홈 '주요 공지' 카드
+  function noticeCard(n) {
     return `<li><a class="card" href="#notice/${n.id}">
-      <div class="card-title-row"><h3 class="card-title">${q ? highlight(esc(n.title), q) : esc(n.title)}</h3>${n.files.length ? ICON.clip : ""}</div>
-      ${sum ? `<p class="card-sum">${esc(sum)}</p>` : ""}
+      <div class="card-title-row"><h3 class="card-title">${esc(n.title)}</h3>${n.files.length ? ICON.clip : ""}</div>
       <div class="card-meta">
         <span class="tag-row">${n.date && isNew(n.date) ? '<span class="tag tag-new">NEW</span>' : ""}${n.pinned ? '<span class="tag">중요</span>' : ""}<span class="tag c-${n.cat}">${catName(n.cat)}</span></span>
         ${n.date ? `<span class="card-date">${fmtDate(n.date)}</span>` : ""}
@@ -229,11 +220,11 @@
       ${sim.length ? `<div class="attach sim"><${h}>비슷한 질문</${h}><ul>${sim.map((x) => `<li><a href="#faq/${x.id}">${ICON.chevR}${esc(x.q)}</a></li>`).join("")}</ul></div>` : ""}`;
   }
 
+  // 검색어가 있으면 분류와 상관없이 모든 질문에서, 없으면 고른 분류만 ('top' = 먼저 확인할 질문)
   function filteredFaqs() {
     const q = norm(state.faqQuery);
-    return FAQS
-      .filter((f) => state.faqCat === "all" || f.cat === state.faqCat)
-      .filter((f) => !q || norm(f.q + f.a).includes(q) || f.keywords.some((k) => q.includes(norm(k)) || norm(k).includes(q)));
+    if (q) return FAQS.filter((f) => norm(f.q + f.a).includes(q) || f.keywords.some((k) => q.includes(norm(k)) || norm(k).includes(q)));
+    return FAQS.filter((f) => (state.faqCat === "top" ? f.pick : f.cat === state.faqCat));
   }
 
   /* ---------- 화면: 홈 ---------- */
@@ -287,7 +278,7 @@
       <section class="section panel" aria-labelledby="h-notice">
         <div class="section-head">
           <h2 class="section-title" id="h-notice">주요 공지</h2>
-          <a class="more-link" href="#notice">전체 보기 ${ICON.chevR}</a>
+          <a class="more-link" href="#notice" data-go="notice">전체 보기 ${ICON.chevR}</a>
         </div>
         <ul class="card-list">${notices.map((n) => noticeCard(n)).join("")}</ul>
       </section>
@@ -298,7 +289,7 @@
             <h2 class="section-title" id="h-top">먼저 확인할 질문</h2>
             <p class="section-desc">교육장 생활에 바로 필요한 내용</p>
           </div>
-          <a class="more-link" href="#faq">전체 보기 ${ICON.chevR}</a>
+          <a class="more-link" href="#faq" data-go="faq">전체 보기 ${ICON.chevR}</a>
         </div>
         <ol class="rank-list">${top.map((f) => `<li><a class="rank-row" href="#faq/${f.id}">
           <span class="faq-mark" aria-hidden="true">Q</span><span class="q-body"><span class="rank-q">${esc(f.q)}</span><span class="tag c-${f.cat}">${catName(f.cat)}</span></span><span class="chev">${ICON.chevR}</span>
@@ -339,6 +330,11 @@
       Analytics.event("category", { cat: b.dataset.cat, from: "home" });
       state.faqCat = b.dataset.cat; state.faqQuery = "";
       location.hash = "#faq";
+    }));
+    // '전체 보기': 질문은 '먼저 확인할 질문'부터, 공지는 전체부터 (검색어는 비운다)
+    main.querySelectorAll("[data-go]").forEach((a) => a.addEventListener("click", () => {
+      if (a.dataset.go === "faq") { state.faqCat = "top"; state.faqQuery = ""; }
+      else { state.noticeCat = "all"; state.noticeQuery = ""; state.noticePage = 1; state.noticeSeen = null; }
     }));
   }
 
@@ -399,126 +395,115 @@
         </a></li>`).join("")}</ul>
       </section>` : ""}`;
     const moreFaq = box.querySelector("[data-more-faq]");
-    if (moreFaq) moreFaq.addEventListener("click", () => { state.faqQuery = q; state.faqCat = "all"; location.hash = "#faq"; });
+    if (moreFaq) moreFaq.addEventListener("click", () => { state.faqQuery = q; state.faqCat = "top"; location.hash = "#faq"; });
     const moreNotice = box.querySelector("[data-more-notice]");
-    if (moreNotice) moreNotice.addEventListener("click", () => { state.noticeQuery = q; state.noticeCat = "all"; location.hash = "#notice"; });
+    if (moreNotice) moreNotice.addEventListener("click", () => { state.noticeQuery = q; state.noticeCat = "all"; state.noticePage = 1; state.noticeSeen = null; location.hash = "#notice"; });
     bindEmptyChat(box, "answer-card", q);
   }
 
+  /* ---------- 질문·공지 공통 틀: 분류 메뉴 + 한 줄 목록 (도움말 센터 방식) ---------- */
+  // PC: 왼쪽에 분류 메뉴가 따라오고, 가운데 한 줄 목록에서 누른 자리에 답이 펼쳐진다
+  // 휴대폰: 탭 아래에 분류 줄이 가로로 붙어 따라온다 (공지 본문에서는 숨김)
+  function hcFrame({ cats, current, label, search = "", detail = false }) {
+    main.innerHTML = `<div class="hc${detail ? " is-detail" : ""}">
+      ${search}
+      <div class="hc-nav"><div class="hc-cats" role="group" aria-label="${label}">${cats.map((c) =>
+        `<button class="chip hc-cat" type="button" data-cat="${c.id}" aria-pressed="${c.id === current}">${c.name}<span class="n">${c.n}</span></button>`).join("")}</div></div>
+      <div class="hc-main"></div>
+    </div>`;
+    const nav = main.querySelector(".hc-cats");
+    nav.addEventListener("scroll", () => edgeNav(nav), { passive: true });
+    centerNav(nav);
+    return main.querySelector(".hc-main");
+  }
+  const setNav = (nav, current) => nav.querySelectorAll(".hc-cat").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.cat === current)));
+  // 휴대폰 가로 분류 줄: 고른 분류를 가운데로 옮기고, 옆에 더 있으면 끝을 흐리게 보여 준다
+  function centerNav(nav) {
+    const b = nav.querySelector('[aria-pressed="true"]');
+    if (b && nav.scrollWidth > nav.clientWidth) nav.scrollLeft = b.offsetLeft - (nav.clientWidth - b.offsetWidth) / 2;
+    edgeNav(nav);
+  }
+  function edgeNav(nav) {
+    const more = nav.scrollWidth > nav.clientWidth + 1;
+    nav.classList.toggle("fade-l", more && nav.scrollLeft > 4);
+    nav.classList.toggle("fade-r", more && nav.scrollLeft + nav.clientWidth < nav.scrollWidth - 4);
+  }
+  const searchBox = (id, label, placeholder, value) => `<div class="search hc-search" role="search">${ICON.search}
+    <label class="sr-only" for="${id}">${label}</label>
+    <input id="${id}" type="search" placeholder="${placeholder}" value="${esc(value)}">
+    <button class="search-clear" type="button" aria-label="검색어 지우기" ${value ? "" : "hidden"}>${ICON.close}</button></div>`;
+  // 검색창 연결. 돌려주는 함수는 검색어를 지운다 (분류를 고를 때)
+  function bindSearch(onChange) {
+    const input = main.querySelector(".hc-search input"), clear = main.querySelector(".hc-search .search-clear");
+    input.addEventListener("input", () => { clear.hidden = !input.value; onChange(input.value); });
+    clear.addEventListener("click", () => { input.value = ""; clear.hidden = true; input.focus(); onChange(""); });
+    return () => { input.value = ""; clear.hidden = true; };
+  }
+  // 분류를 바꿨는데 목록 위쪽이 화면 밖이면 맨 위로
+  const toListTop = () => { if (main.getBoundingClientRect().top < 0) window.scrollTo(0, 0); };
+
   /* ---------- 화면: 자주 묻는 질문 ---------- */
-  function renderFaq(root = main, openId = null) {
+  const faqCats = () => [
+    { id: "top", name: "먼저 확인할 질문", n: FAQS.filter((f) => f.pick).length },
+    ...CATEGORIES.filter((c) => c.id !== "all").map((c) => ({ id: c.id, name: c.name, n: FAQS.filter((f) => f.cat === c.id).length })).filter((c) => c.n),
+  ];
+
+  function renderFaq(openId = null) {
     setChrome("faq", "자주 묻는 질문");
-    // 주소(#faq/24)로 연 질문이 지금 고른 분류·검색어에 안 걸리면 필터를 풀어서 보여 준다
-    if (openId && !filteredFaqs().some((f) => f.id === openId)) { state.faqCat = "all"; state.faqQuery = ""; }
+    const cats = faqCats();
+    if (!cats.some((c) => c.id === state.faqCat)) state.faqCat = "top";
+    // 주소(#faq/24)로 연 질문이 지금 분류·검색에 없으면 그 질문의 분류로 바꿔서 보여 준다
+    const target = openId && FAQS.find((f) => f.id === openId);
+    if (target && !filteredFaqs().includes(target)) { state.faqQuery = ""; state.faqCat = target.cat; }
+    const searching = () => !!state.faqQuery.trim();
+    const box = hcFrame({ cats, current: searching() ? null : state.faqCat, label: "질문 분류",
+      search: searchBox("faqSearch", "질문 검색", "질문 검색 (예: 사물함)", state.faqQuery) });
+    box.id = "faqResult";
+    const nav = main.querySelector(".hc-cats");
+    const toList = () => { if (location.hash !== "#faq") history.replaceState(null, "", "#faq"); };
 
-    root.innerHTML = `
-      <div class="search" role="search">
-        ${ICON.search}
-        <label class="sr-only" for="faqSearch">질문 검색</label>
-        <input id="faqSearch" type="search" placeholder="질문 검색 (예: 사물함)" value="${esc(state.faqQuery)}">
-        <button class="search-clear" type="button" id="faqClear" aria-label="검색어 지우기" ${state.faqQuery ? "" : "hidden"}>${ICON.close}</button>
-      </div>
-      <div class="chips scroll" style="margin-top:14px" role="group" aria-label="분류">
-        ${CATEGORIES.map((c) => {
-          const n = c.id === "all" ? FAQS.length : FAQS.filter((f) => f.cat === c.id).length;
-          return `<button class="chip" type="button" data-cat="${c.id}" aria-pressed="${state.faqCat === c.id}">${c.name}<span class="n">${n}</span></button>`;
-        }).join("")}
-      </div>
-      <div class="list-toolbar" style="margin-top:16px">
-        <span class="list-count" id="faqCount"></span>
-      </div>
-      <div id="faqResult"></div>`;
-
-    const input = $("#faqSearch");
-    const clear = $("#faqClear");
-    input.addEventListener("input", () => {
-      state.faqQuery = input.value;
-      clear.hidden = !input.value;
-      drawFaqList();
+    // 검색어가 있으면 분류와 상관없이 모든 질문에서 찾는다
+    const resetSearch = bindSearch((v) => {
+      state.faqQuery = v;
+      setNav(nav, searching() ? null : state.faqCat);
+      toList(); drawFaqList();
     });
-    clear.addEventListener("click", () => { input.value = ""; state.faqQuery = ""; clear.hidden = true; input.focus(); drawFaqList(); });
-    root.querySelectorAll(".chip[data-cat]").forEach((b) => b.addEventListener("click", () => {
-      state.faqCat = b.dataset.cat;
+    nav.addEventListener("click", (e) => {
+      const b = e.target.closest(".hc-cat");
+      if (!b) return;
+      state.faqCat = b.dataset.cat; state.faqQuery = ""; resetSearch();
+      setNav(nav, state.faqCat); centerNav(nav);
+      toList(); drawFaqList(); toListTop();
       Analytics.event("category", { cat: b.dataset.cat, from: "faq" });
-      root.querySelectorAll(".chip[data-cat]").forEach((x) => x.setAttribute("aria-pressed", x === b));
-      drawFaqList();
-    }));
-    $("#faqResult").addEventListener("click", (e) => {
-      const more = e.target.closest("button.more-row");
-      if (more) { toggleGroup(more); return; }
+    });
+    box.addEventListener("click", (e) => {
       const b = e.target.closest("button.q-row");
       if (b) toggleFaq(b);
     });
 
     drawFaqList();
-    if (openId) {
-      const b = root.querySelector(`button.q-row[data-id="${openId}"]`);
+    if (target) {
+      const b = box.querySelector(`button.q-row[data-id="${target.id}"]`);
       if (b) { toggleFaq(b, true, { track: false }); pendingScroll = b.closest(".q-item"); }
     }
   }
 
   function drawFaqList() {
-    const list = filteredFaqs();
-    $("#faqCount").innerHTML = `<b>${list.length}</b>건`;
-    const box = $("#faqResult");
+    const box = $("#faqResult"), list = filteredFaqs(), q = state.faqQuery.trim();
+    const cat = faqCats().find((c) => c.id === state.faqCat);
+    const head = q
+      ? `<h2 class="hc-title"><span>'${esc(q)}' 검색 결과</span><span class="n">${list.length}개</span></h2>`
+      : `<h2 class="hc-title"><span>${cat.name}</span><span class="n">${list.length}개</span></h2>${state.faqCat === "top" ? '<p class="hc-desc">교육장 생활에 바로 필요한 내용부터 모았습니다.</p>' : ""}`;
     if (!list.length) {
-      box.innerHTML = emptyBox("찾는 질문이 아직 정리되지 않았습니다", "챗봇에게 물어보거나 디스코드 allinone-문의사항 채널에 질문해 주세요.");
+      box.innerHTML = head + emptyBox("찾는 질문이 아직 정리되지 않았습니다", "다른 말로 찾아보거나, 챗봇에게 물어보거나, 디스코드 allinone-문의사항 채널에 질문해 주세요.");
       bindEmptyChat(box, "faq-empty", state.faqQuery);
       return;
     }
-    const row = faqItem;
-    // 전체 + 검색어 없음: 분류별로 묶어 보여 준다 (분류 이름이 제목이라 줄마다 태그는 빼고)
-    // 분류마다 앞의 3개만 보이고 나머지는 '더 보기'로 그 자리에서 펼친다. 분류를 고르거나 검색하면 전부 보인다
-    // 넓은 화면에서는 분류 묶음(grouped)과 질문 줄(flat)을 2단으로 놓아 한 화면에 더 많이 보이게 한다
-    const grouped = state.faqCat === "all" && !state.faqQuery.trim();
-    box.classList.toggle("grouped", grouped);
-    if (grouped) {
-      // 주소로 연 질문(#faq/24)이 뒤쪽에 있으면 그 분류는 펼쳐 둔다
-      const cur = FAQS.find((f) => location.hash === `#faq/${f.id}`);
-      if (cur) state.faqOpen.add(cur.cat);
-    }
-    box.innerHTML = grouped
-      ? CATEGORIES.filter((c) => c.id !== "all").map((c) => {
-          // '먼저 확인할 질문'(pick)을 앞으로
-          const items = list.filter((f) => f.cat === c.id).sort((a, b) => (b.pick ? 1 : 0) - (a.pick ? 1 : 0));
-          if (!items.length) return "";
-          const foldable = items.length > FAQ_PREVIEW + 1; // 하나만 숨길 거면 그냥 다 보여 준다
-          const open = !foldable || state.faqOpen.has(c.id);
-          const rows = items.map((f, i) => row(f, { tag: false, attrs: foldable && i >= FAQ_PREVIEW ? ` data-extra${open ? "" : " hidden"}` : "" })).join("");
-          const more = foldable ? `<li class="more-li"><button class="more-row" type="button" data-group="${c.id}" aria-expanded="${open}" aria-controls="ql-${c.id}"><span class="t">${groupMoreLabel(c.id, items.length - FAQ_PREVIEW, open)}</span>${ICON.chevD}</button></li>` : "";
-          return `<section class="q-sec" aria-labelledby="g-${c.id}"><h2 class="q-group" id="g-${c.id}">${c.name}<span class="n">${items.length}</span></h2>
-            <ul class="q-list" id="ql-${c.id}">${rows}${more}</ul></section>`;
-        }).join("")
-      : `<ul class="q-list flat">${list.map((f) => row(f, { tag: state.faqCat === "all" })).join("")}</ul>`;
+    // 한 분류만 보일 때는 분류 태그를 빼고, 여러 분류가 섞이면(먼저 확인할 질문·검색) 붙인다
+    box.innerHTML = `${head}<ul class="q-list">${list.map((f) => faqItem(f, { tag: !!q || state.faqCat === "top" })).join("")}</ul>`;
   }
 
-  const groupMoreLabel = (cat, n, open) => (open ? `${catName(cat)} 질문 접기` : `${catName(cat)} 질문 ${n}개 더 보기`);
-
-  // 분류 '더 보기' / '접기'
-  function toggleGroup(btn, { focus = true } = {}) {
-    const cat = btn.dataset.group, open = btn.getAttribute("aria-expanded") !== "true";
-    const ul = $(`#ql-${cat}`), extra = [...ul.querySelectorAll("li[data-extra]")];
-    if (!open) {
-      // 접히는 질문의 답이 펼쳐져 있으면 먼저 닫는다
-      const openBtn = ul.querySelector('li[data-extra] button.q-row[aria-expanded="true"]');
-      if (openBtn) toggleFaq(openBtn, false);
-    }
-    extra.forEach((li) => { li.hidden = !open; });
-    if (open) state.faqOpen.add(cat); else state.faqOpen.delete(cat);
-    btn.setAttribute("aria-expanded", String(open));
-    btn.querySelector(".t").textContent = groupMoreLabel(cat, extra.length, open);
-    if (open) {
-      // 키보드로 누른 경우 새로 보인 첫 질문으로 이어서 읽을 수 있게
-      if (focus) extra[0]?.querySelector(".q-row")?.focus({ preventScroll: true });
-      Analytics.event("faq-more", { cat });
-    } else {
-      // 접으면서 분류 제목이 화면 위로 사라졌으면 제목이 보이게 올린다
-      const h = $(`#g-${cat}`);
-      if (h.getBoundingClientRect().top < $(".head").getBoundingClientRect().bottom) h.scrollIntoView({ block: "start" });
-    }
-  }
-
-  // 휴대폰 질문 펼치기/접기. 한 번에 하나만 열고, 주소도 #faq/24 로 맞춰 링크 공유·새로고침이 되게 한다
+  // 질문 펼치기/접기. 한 번에 하나만 열고, 주소도 #faq/24 로 맞춰 링크 공유·새로고침이 되게 한다
   function toggleFaq(btn, open = btn.getAttribute("aria-expanded") !== "true", { track = true } = {}) {
     const f = FAQS.find((x) => x.id === +btn.dataset.id);
     if (!f) return;
@@ -532,86 +517,116 @@
     btn.setAttribute("aria-expanded", String(open));
     panel.hidden = !open;
     history.replaceState(null, "", open ? `#faq/${f.id}` : "#faq");
-    // 위에서 열려 있던 답이 접히며 화면이 밀리면, 누른 질문이 탭 줄 아래에 보이게 맞춘다
-    const top = btn.getBoundingClientRect().top, bar = $(".tabs").getBoundingClientRect().bottom;
+    // 위에서 열려 있던 답이 접히며 화면이 밀리면, 누른 질문이 위에 붙은 탭·분류 줄 아래에 보이게 맞춘다
+    const top = btn.getBoundingClientRect().top, bar = stickH();
     if (top < bar) window.scrollBy(0, top - bar - 8);
     if (open && track) Analytics.page(`#faq/${f.id}`, `Q. ${f.q}`.replace(/⁠/g, ""));
   }
 
 
   /* ---------- 화면: 공지사항 ---------- */
+  const noticeCats = () => CATEGORIES
+    .map((c) => ({ id: c.id, name: c.name, n: c.id === "all" ? NOTICES.length : NOTICES.filter((x) => x.cat === c.id).length }))
+    .filter((c) => c.n);
+  // 검색어가 있으면 분류와 상관없이 모든 공지에서, 없으면 고른 분류만 (중요 공지가 맨 위)
   const filteredNotices = () => {
     const words = state.noticeQuery.trim().split(/\s+/).map(Matcher.norm).filter(Boolean);
-    return sortedNotices()
-      .filter((n) => state.noticeCat === "all" || n.cat === state.noticeCat)
-      .filter((n) => { if (!words.length) return true; const t = Matcher.norm(n.title + n.body); return words.every((w) => t.includes(w)); });
+    if (words.length) return sortedNotices().filter((n) => { const t = Matcher.norm(n.title + n.body); return words.every((w) => t.includes(w)); });
+    return sortedNotices().filter((n) => state.noticeCat === "all" || n.cat === state.noticeCat);
   };
 
-  function renderNotice(root = main) {
+  // 게시판 한 줄: [중요][NEW] 제목 📎 / 분류 · 날짜
+  function noticeRow(n, q = "") {
+    const tags = `${n.pinned ? '<span class="tag">중요</span>' : ""}${n.date && isNew(n.date) ? '<span class="tag tag-new">NEW</span>' : ""}`;
+    return `<li><a class="nt-row" href="#notice/${n.id}">
+      <div class="nt-body">
+        <h3 class="nt-title">${tags}${q ? highlight(esc(n.title), q) : esc(n.title)}${n.files.length ? ICON.clip : ""}</h3>
+        <p class="nt-meta">${catName(n.cat)}${n.date ? ` · ${fmtDate(n.date)}` : ""}</p>
+      </div>
+      <span class="chev">${ICON.chevR}</span>
+    </a></li>`;
+  }
+
+  function renderNotice() {
     setChrome("notice", "공지사항");
-    // 공지가 있는 분류만 칩으로 보여 준다
-    const cats = CATEGORIES.filter((c) => c.id === "all" || NOTICES.some((n) => n.cat === c.id));
+    const cats = noticeCats();
     if (!cats.some((c) => c.id === state.noticeCat)) state.noticeCat = "all";
-    root.innerHTML = `
-      <div class="search" role="search">
-        ${ICON.search}
-        <label class="sr-only" for="noticeSearch">공지 검색</label>
-        <input id="noticeSearch" type="search" placeholder="공지 검색 (예: 시험)" value="${esc(state.noticeQuery)}">
-        <button class="search-clear" type="button" id="noticeClear" aria-label="검색어 지우기" ${state.noticeQuery ? "" : "hidden"}>${ICON.close}</button>
-      </div>
-      <div class="chips scroll" style="margin-top:14px" role="group" aria-label="분류">
-        ${cats.map((c) => {
-          const n = c.id === "all" ? NOTICES.length : NOTICES.filter((x) => x.cat === c.id).length;
-          return `<button class="chip" type="button" data-cat="${c.id}" aria-pressed="${state.noticeCat === c.id}">${c.name}<span class="n">${n}</span></button>`;
-        }).join("")}
-      </div>
-      <div class="list-toolbar" style="margin-top:16px"><span class="list-count" id="noticeCount"></span></div>
-      <div id="noticeResult"></div>`;
+    const searching = () => !!state.noticeQuery.trim();
+    const box = hcFrame({ cats, current: searching() ? null : state.noticeCat, label: "공지 분류",
+      search: searchBox("noticeSearch", "공지 검색", "공지 검색 (예: 시험)", state.noticeQuery) });
+    box.id = "noticeResult";
+    const nav = main.querySelector(".hc-cats");
+
     const draw = () => {
       const list = filteredNotices(), q = state.noticeQuery.trim();
-      $("#noticeCount").innerHTML = `<b>${list.length}</b>건`;
-      const box = $("#noticeResult");
+      const cat = cats.find((c) => c.id === state.noticeCat);
+      const head = `<h2 class="hc-title" tabindex="-1"><span>${q ? `'${esc(q)}' 검색 결과` : cat.id === "all" ? "전체 공지" : `${cat.name} 공지`}</span><span class="n">${list.length}개</span></h2>`;
       if (!list.length) {
-        box.innerHTML = emptyBox(q ? `'${esc(q)}'에 맞는 공지를 찾지 못했습니다` : "이 분류에는 공지가 없습니다", "다른 말로 찾아보거나, 챗봇에게 물어보세요.");
+        box.innerHTML = head + emptyBox(q ? `'${esc(q)}'에 맞는 공지를 찾지 못했습니다` : "이 분류에는 공지가 없습니다", "다른 말로 찾아보거나, 챗봇에게 물어보세요.");
         bindEmptyChat(box, "notice-empty", q);
         return;
       }
-      // 검색하지 않을 때는 앞의 8개만 보여 주고 '더 보기'로 나머지를 펼친다
-      const cut = !q && !state.noticeAll && list.length > NOTICE_PREVIEW + 2;
-      const shown = cut ? list.slice(0, NOTICE_PREVIEW) : list;
-      box.innerHTML = `<ul class="card-list" id="noticeList">${shown.map((n) => noticeCard(n, { summary: true, q })).join("")}</ul>
-        ${cut ? `<button class="more-btn" type="button" id="noticeMore"><span>공지 ${list.length - NOTICE_PREVIEW}개 더 보기</span>${ICON.chevD}</button>` : ""}`;
-      if (cut) $("#noticeMore").addEventListener("click", () => {
-        state.noticeAll = true;
-        draw();
-        $("#noticeList").children[NOTICE_PREVIEW]?.querySelector("a")?.focus({ preventScroll: true });
-        Analytics.event("notice-more");
-      });
+      // 한 쪽에 10개씩. 본문을 보고 '목록으로' 돌아오면 그 공지가 있는 쪽을 연다
+      const pages = Math.ceil(list.length / NOTICE_PAGE);
+      const seen = list.findIndex((n) => n.id === state.noticeSeen);
+      if (seen >= 0) state.noticePage = Math.floor(seen / NOTICE_PAGE) + 1;
+      state.noticeSeen = null;
+      const p = state.noticePage = Math.min(Math.max(1, state.noticePage), pages);
+      const shown = list.slice((p - 1) * NOTICE_PAGE, p * NOTICE_PAGE);
+      box.innerHTML = `${head}<ul class="q-list nt-list" id="noticeList">${shown.map((n) => noticeRow(n, q)).join("")}</ul>${pages > 1 ? pager(p, pages) : ""}`;
     };
-    const input = $("#noticeSearch"), clear = $("#noticeClear");
-    input.addEventListener("input", () => { state.noticeQuery = input.value; clear.hidden = !input.value; draw(); });
-    clear.addEventListener("click", () => { input.value = ""; state.noticeQuery = ""; clear.hidden = true; input.focus(); draw(); });
-    root.querySelectorAll(".chip[data-cat]").forEach((b) => b.addEventListener("click", () => {
-      state.noticeCat = b.dataset.cat;
-      Analytics.event("category", { cat: b.dataset.cat, from: "notice" });
-      root.querySelectorAll(".chip[data-cat]").forEach((x) => x.setAttribute("aria-pressed", x === b));
+    // 쪽 번호를 누르면 그 쪽을 그리고, 목록 제목이 위에 붙은 탭·분류 줄 바로 아래 오게 올린다
+    box.addEventListener("click", (e) => {
+      const b = e.target.closest(".pg-btn[data-page]");
+      if (!b || b.disabled) return;
+      state.noticePage = +b.dataset.page;
       draw();
-    }));
+      const t = box.querySelector(".hc-title"), off = t.getBoundingClientRect().top - stickH() - 8;
+      if (off < 0) window.scrollBy(0, off);
+      t.focus({ preventScroll: true }); // 화면 읽기 프로그램은 목록 처음부터 다시 읽는다
+      Analytics.event("notice-page", { page: state.noticePage });
+    });
+    const resetSearch = bindSearch((v) => { state.noticeQuery = v; state.noticePage = 1; setNav(nav, searching() ? null : state.noticeCat); draw(); });
+    nav.addEventListener("click", (e) => {
+      const b = e.target.closest(".hc-cat");
+      if (!b) return;
+      state.noticeCat = b.dataset.cat; state.noticeQuery = ""; state.noticePage = 1; resetSearch();
+      setNav(nav, state.noticeCat); centerNav(nav);
+      draw(); toListTop();
+      Analytics.event("category", { cat: b.dataset.cat, from: "notice" });
+    });
     draw();
   }
 
-  function renderNoticeDetail(id, root = main) {
+  // 쪽 번호: ‹ 이전  1 2 3  다음 › (번호는 지금 쪽 둘레로 5개까지)
+  function pager(p, pages) {
+    const from = Math.max(1, Math.min(p - 2, pages - 4)), to = Math.min(pages, from + 4);
+    const nums = [];
+    for (let i = from; i <= to; i++) nums.push(`<button class="pg-btn${i === p ? " on" : ""}" type="button" data-page="${i}" aria-label="${i}쪽"${i === p ? ' aria-current="page"' : ""}>${i}</button>`);
+    const chevL = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>';
+    return `<nav class="pagination" aria-label="공지 목록 쪽 번호">
+      <button class="pg-btn pg-step" type="button" data-page="${p - 1}"${p === 1 ? " disabled" : ""}>${chevL}이전</button>
+      ${nums.join("")}
+      <button class="pg-btn pg-step" type="button" data-page="${p + 1}"${p === pages ? " disabled" : ""}>다음${ICON.chevR}</button>
+    </nav>`;
+  }
+
+  function renderNoticeDetail(id) {
     // 이전/다음은 지금 고른 분류·검색 기준, 거기에 없으면 전체 기준
     let all = filteredNotices();
-    if (!all.some((n) => n.id === id)) all = sortedNotices();
+    const inList = all.some((n) => n.id === id);
+    if (!inList) all = sortedNotices();
     const i = all.findIndex((n) => n.id === id);
     if (i < 0) return renderNotice();
     const n = all[i];
+    state.noticeSeen = n.id; // '목록으로' 돌아가면 이 공지가 있는 쪽을 연다
     setChrome("notice", "공지사항");
     const prev = all[i - 1], next = all[i + 1];
     const related = FAQS.filter((f) => (f.related || []).includes(n.id));
 
-    root.innerHTML = `${backLink("#notice", "공지사항")}
+    // PC에서는 왼쪽 분류 메뉴가 그대로 남아 다른 분류로 바로 갈 수 있다 (휴대폰에서는 숨김)
+    const box = hcFrame({ cats: noticeCats(), current: inList ? (state.noticeQuery.trim() ? null : state.noticeCat) : "all", label: "공지 분류", detail: true });
+    box.innerHTML = `${backLink("#notice", "공지사항")}
       <article class="detail">
         <div class="detail-head">
           <div class="head-row"><div class="tag-row">${n.date && isNew(n.date) ? '<span class="tag tag-new">NEW</span>' : ""}${n.pinned ? '<span class="tag">중요</span>' : ""}<span class="tag c-${n.cat}">${catName(n.cat)}</span></div>${copyBtn(`#notice/${n.id}`)}</div>
@@ -628,8 +643,27 @@
         </ul>
       </article>
       <div class="back-row"><a class="btn btn-tertiary btn-block" href="#notice">목록으로</a></div>`;
-    bindToc(root);
+    main.querySelector(".hc-cats").addEventListener("click", (e) => {
+      const b = e.target.closest(".hc-cat");
+      if (!b) return;
+      state.noticeCat = b.dataset.cat; state.noticeQuery = ""; state.noticePage = 1; state.noticeSeen = null;
+      Analytics.event("category", { cat: b.dataset.cat, from: "notice-detail" });
+      location.hash = "#notice";
+    });
+    bindToc(box);
   }
+
+  // 위에 붙어 따라오는 머리글(탭)과 휴대폰 분류 줄의 높이 → CSS 변수 (분류 줄 위치, 질문으로 스크롤할 때 여백)
+  const wide = matchMedia("(min-width: 1024px)");
+  function syncStick() {
+    const head = $(".head"), nav = main.querySelector(".hc-nav");
+    const headH = head.offsetHeight + (parseFloat(getComputedStyle(head).top) || 0); // 휴대폰은 로고 줄이 위로 사라지고 탭만 남는다
+    const navH = nav && !wide.matches ? nav.offsetHeight : 0;
+    const s = document.documentElement.style;
+    s.setProperty("--head-h", `${headH}px`);
+    s.setProperty("--stick-h", `${headH + navH}px`);
+  }
+  const stickH = () => parseFloat(document.documentElement.style.getPropertyValue("--stick-h")) || $(".head").getBoundingClientRect().bottom;
 
   function moveTabBar() {
     const t = document.querySelector('.tab[aria-selected="true"]');
@@ -637,6 +671,7 @@
     if (!t || !bar) return;
     bar.style.width = `${t.offsetWidth}px`;
     bar.style.transform = `translateX(${t.offsetLeft}px)`;
+    syncStick(); // 화면 폭·글자 크기가 바뀌면 탭·분류 줄 높이도 바뀐다
   }
   window.addEventListener("resize", moveTabBar);
   document.fonts && document.fonts.ready.then(moveTabBar);
@@ -670,13 +705,13 @@
   }
   function renderRoute() {
     const [page, id] = location.hash.replace(/^#/, "").split("/");
-    // 질문·공지 목록은 넓은 화면에서 2단으로 넓게(list), 공지 본문은 읽기 좋은 폭으로(single).
-    // 질문은 PC에서도 휴대폰처럼 누른 자리에서 답이 펼쳐진다 (오른쪽 상세 칸 없음)
-    main.dataset.view = page === "notice" && id ? "single" : page === "faq" || page === "notice" ? "list" : "home";
-    if (page === "faq") renderFaq(main, id ? +id : null);
+    // 질문·공지는 분류 메뉴 + 한 줄 목록(hc), 홈은 한눈에 보기
+    main.dataset.view = page === "faq" || page === "notice" ? "hc" : "home";
+    if (page === "faq") renderFaq(id ? +id : null);
     else if (page === "notice" && id) renderNoticeDetail(+id);
     else if (page === "notice") renderNotice();
     else renderHome();
+    syncStick();
     window.scrollTo(0, 0);
     // 주소로 연 질문은 맨 위로 올린 뒤 그 질문 위치로 스크롤
     if (pendingScroll) { pendingScroll.scrollIntoView({ block: "start" }); pendingScroll = null; }

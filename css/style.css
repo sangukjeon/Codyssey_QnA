@@ -174,10 +174,6 @@ main:focus { outline: none; }
 .card-meta dd { margin: 0; font-variant-numeric: tabular-nums; }
 .card-meta .chev { margin-left: auto; color: var(--icon-muted); }
 
-.list-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 4px 2px 10px; }
-.list-count { font-size: 0.9375rem; line-height: 1.57; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
-.list-count b { font-weight: 700; color: var(--text-strong); }
-
 /* ===== 검색 ===== */
 .search {
   display: flex; align-items: center; gap: 8px; height: 3rem; padding: 0 8px 0 14px;
@@ -639,22 +635,9 @@ mark { background: #fff1b8; color: inherit; border-radius: 3px; padding: 0 1px; 
 .bubble .tbl { font-size: 0.9375rem; line-height: 1.46; }
 .bubble .tbl th, .bubble .tbl td { padding: 8px 10px; }
 
-/* ===== PC 넓은 화면: 질문·공지 목록은 오른쪽 빈 칸 없이 2단으로 ===== */
+/* ===== PC 넓은 화면 ===== */
 @media (min-width: 1024px) {
   .wrap { max-width: 1120px; }
-  main[data-view="single"] { max-width: 720px; margin: 0 auto; }
-  main[data-view="list"] .search { max-width: 560px; }
-  /* 자주 묻는 질문(전체): 분류 묶음을 2단으로. 한쪽이 펼쳐져도 옆 묶음은 위에 붙어 있게 */
-  #faqResult.grouped { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 24px; align-items: start; }
-  #faqResult.grouped .q-sec { min-width: 0; }
-  #faqResult.grouped .q-group { margin-top: 4px; }
-  /* 분류를 고르거나 검색했을 때: 질문 줄을 2단으로 (줄 경계선은 2번째 칸부터 위쪽에만) */
-  #faqResult .q-list.flat { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 40px; align-items: start; }
-  #faqResult .q-list.flat > li:nth-child(2) { border-top: 0; }
-  /* 공지 카드 2단, 같은 줄 카드는 높이를 맞춘다 */
-  #noticeList { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-  #noticeList > li > .card { height: 100%; display: flex; flex-direction: column; }
-  #noticeList .card > .card-meta { margin-top: auto; padding-top: 8px; } /* 분류 태그는 카드 맨 아래로 맞춤 */
 }
 
 /* ===== PC 홈: 한 화면에 나란히 ===== */
@@ -798,15 +781,11 @@ a.sched-row:active { transform: scale(.96); background: var(--pressed); }
 .answer-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
 .answer-actions .btn { min-height: 2.75rem; height: auto; padding-block: 8px; }
 
-/* 자주 묻는 질문: 분류별 묶음 + 그 자리에서 펼치기 */
-.q-group { display: flex; align-items: baseline; gap: 6px; margin: 24px 4px 10px; font-size: 1.125rem; line-height: 1.4; font-weight: 700; color: var(--text-strong); }
-#faqResult > .q-sec:first-child .q-group { margin-top: 4px; }
-.q-group .n { font-size: 0.9375rem; font-weight: 700; color: var(--primary); font-variant-numeric: tabular-nums; }
+/* 자주 묻는 질문: 그 자리에서 펼치기 */
 .q-h { margin: 0; font: inherit; }
 button.q-row { text-align: left; }
 .q-row[aria-expanded="true"] .q-text { color: var(--primary); }
 .q-row[aria-expanded="true"] .faq-chev { transform: rotate(180deg); }
-.q-item { scroll-margin-top: 4.5rem; }
 .q-panel { padding: 0 0 16px; }
 .q-panel-foot { display: flex; justify-content: flex-end; margin-top: 12px; }
 .q-panel .attach, .detail-body .attach { margin: 12px 0 0; }
@@ -815,7 +794,6 @@ button.q-row { text-align: left; }
 .attach a svg { flex-shrink: 0; margin-top: 3px; }
 
 /* 공지 카드: 첫 문장 요약 + 날짜 + NEW */
-.card-sum { margin: 6px 0 0; font-size: 0.9375rem; line-height: 1.55; color: var(--text-secondary); text-wrap: pretty; }
 .card-date { margin-left: auto; font-size: 0.875rem; font-weight: 600; color: var(--text-secondary); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .card-meta .card-date + .chev { margin-left: 0; }
 .tag.tag-new { color: #b42318; background: #fee4e2; }
@@ -835,7 +813,6 @@ button.q-row { text-align: left; }
   .tab { min-height: 0; height: 100%; }
   .text-size { align-self: center; order: 3; }
   .sub-h { scroll-margin-top: 80px; }
-  .q-item { scroll-margin-top: 80px; }
 
   /* 홈: 일정 | 공지 | 질문, 그 아래 분류 8칸 한 줄 */
   #homeSections > .home-cat { grid-column: 1 / -1; }
@@ -862,28 +839,7 @@ button.q-row { text-align: left; }
 .sched-body { grid-area: body; align-self: start; }
 .sched-row .chev { grid-area: chev; }
 
-/* ===== 긴 목록 줄이기: 분류별 '더 보기', 공지 '더 보기', '맨 위로' ===== */
-.q-group { scroll-margin-top: 4.5rem; }
-.more-li { list-style: none; }
-.more-row {
-  display: flex; align-items: center; justify-content: center; gap: 4px; width: calc(100% + 32px); margin: 0 -16px;
-  min-height: 3.25rem; padding: 10px 16px; border-radius: 0 0 15px 15px;
-  font-size: 1rem; line-height: 1.4; font-weight: 600; color: var(--primary); text-align: center;
-  transition: background-color .1s var(--ease);
-}
-.more-row:active { background: var(--pressed); }
-.more-row .faq-chev { flex-shrink: 0; color: var(--primary); }
-.more-row[aria-expanded="true"] .faq-chev { transform: rotate(180deg); }
-
-.more-btn {
-  display: flex; align-items: center; justify-content: center; gap: 4px; width: 100%; margin-top: 10px;
-  min-height: 3.25rem; padding: 10px 16px; border-radius: var(--r-400); border: 1px solid var(--border); background: var(--white);
-  box-shadow: var(--shadow-sm); font-size: 1rem; line-height: 1.4; font-weight: 600; color: var(--primary);
-  transition: transform .1s var(--ease), background-color .1s var(--ease);
-}
-.more-btn:active { transform: scale(.98); background: var(--gray-50); }
-.more-btn .faq-chev { flex-shrink: 0; color: var(--primary); }
-
+/* ===== 긴 목록 줄이기: '맨 위로' ===== */
 .to-top {
   position: fixed; right: 16px; bottom: 84px; z-index: 39; /* 챗봇 버튼(아래 16px + 56px) 위 */
   display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 8px 16px 8px 12px; border-radius: 999px;
@@ -895,10 +851,96 @@ button.q-row { text-align: left; }
 .to-top.show { opacity: 1; visibility: visible; transform: none; }
 .to-top.show:active { transform: scale(.92); }
 .footer { padding-bottom: 140px; } /* 맨 끝에서 '맨 위로'와 챗봇 버튼이 안내 글을 가리지 않게 */
+@media (prefers-reduced-motion: reduce) {
+  .to-top { transition: none; }
+  .to-top.show:active, .pg-btn:active { transform: none; }
+}
+
+/* ===== 질문·공지: 분류 메뉴 + 한 줄 목록 (도움말 센터 방식) ===== */
+/* 휴대폰: 검색창 → 분류 가로 줄(탭 아래에 붙어 따라옴) → 제목 → 목록 */
+.hc-search { margin-bottom: 4px; }
+.hc-nav {
+  position: sticky; top: var(--head-h, 49px); z-index: 20;
+  margin: 0 -16px 16px; padding: 10px 0;
+  background: var(--bg); border-bottom: 1px solid var(--border);
+}
+.hc-cats { display: flex; gap: 8px; padding: 0 16px; overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; }
+.hc-cats::-webkit-scrollbar { display: none; }
+.hc-cats .hc-cat { flex: none; }
+/* 옆에 분류가 더 있으면 그쪽 끝을 흐리게 (밀어서 더 볼 수 있다는 표시) */
+.hc-cats.fade-r { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 48px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 48px), transparent); }
+.hc-cats.fade-l { -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 48px), transparent); mask-image: linear-gradient(to left, #000 calc(100% - 48px), transparent); }
+.hc-cats.fade-l.fade-r { -webkit-mask-image: linear-gradient(to right, transparent, #000 48px, #000 calc(100% - 48px), transparent); mask-image: linear-gradient(to right, transparent, #000 48px, #000 calc(100% - 48px), transparent); }
+.hc.is-detail .hc-nav { display: none; } /* 공지 본문에서는 분류 줄을 숨기고 본문만 */
+
+.hc-title {
+  display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 8px; margin: 0 2px 10px;
+  font-size: 1.25rem; line-height: 1.44; font-weight: 700; color: var(--text-strong); overflow-wrap: anywhere;
+}
+.hc-title .n { font-size: 1rem; font-weight: 700; color: var(--primary); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hc-desc { margin: -6px 2px 12px; font-size: 0.9375rem; line-height: 1.54; color: var(--text-secondary); }
+.q-item { scroll-margin-top: calc(var(--stick-h, 49px) + 8px); } /* 주소로 연 질문이 탭·분류 줄에 가리지 않게 */
+
+/* 공지 게시판 한 줄: [중요][NEW] 제목 📎 / 분류 · 날짜 */
+.nt-row {
+  display: flex; align-items: center; gap: 10px; width: calc(100% + 16px); margin: 0 -8px;
+  min-height: 56px; padding: 14px 8px; border-radius: var(--r-300); color: inherit; text-decoration: none;
+  transition: transform .1s var(--ease), background-color .1s var(--ease);
+}
+.nt-row:active { transform: scale(.98); background: var(--pressed); }
+.nt-body { flex: 1; min-width: 0; }
+.nt-title { margin: 0; font-size: 1.0625rem; line-height: 1.5; font-weight: 600; color: var(--text-strong); text-wrap: pretty; }
+.nt-title .tag { min-height: 0; margin-right: 6px; padding: 0 7px; vertical-align: 1px; }
+.nt-title .clip { margin-left: 4px; vertical-align: -3px; }
+.nt-meta { margin: 4px 0 0; font-size: 0.9375rem; line-height: 1.5; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.nt-row > .chev { display: inline-flex; flex-shrink: 0; color: var(--icon-muted); }
+
+@media (hover: hover) {
+  .q-row:hover, .nt-row:hover { background: var(--pressed); }
+}
+
+/* PC: 왼쪽 분류 메뉴(따라옴) | 가운데 검색창 + 한 줄 목록 */
 @media (min-width: 1024px) {
-  .q-group { scroll-margin-top: 80px; }
+  .hc {
+    display: grid; grid-template-columns: 15rem minmax(0, 1fr); grid-template-areas: "nav search" "nav main";
+    column-gap: 40px; align-items: start;
+  }
+  .hc-search { grid-area: search; max-width: 50rem; margin-bottom: 20px; }
+  .hc-main { grid-area: main; min-width: 0; max-width: 50rem; }
+  .hc-nav { grid-area: nav; top: calc(var(--head-h, 65px) + 16px); margin: 0; padding: 0; background: none; border: 0; }
+  .hc.is-detail .hc-nav { display: block; }
+  .hc-cats { flex-direction: column; gap: 2px; padding: 0; overflow: visible; }
+  .hc-cats.fade-l, .hc-cats.fade-r { -webkit-mask-image: none; mask-image: none; }
+  .hc-cats .hc-cat {
+    justify-content: space-between; width: 100%; min-height: 3rem; padding: 10px 14px;
+    border: 0; border-radius: var(--r-300); background: transparent;
+    font-size: 1.0625rem; font-weight: 600; color: var(--text-secondary); white-space: normal; text-align: left;
+  }
+  .hc-cats .hc-cat::before { content: none; }
+  .hc-cats .hc-cat:active { transform: none; background: var(--pressed); }
+  .hc-cats .hc-cat[aria-pressed="true"] { background: var(--blue-50); color: var(--primary); font-weight: 700; }
+  .hc-title { margin-top: 2px; }
+}
+@media (min-width: 1024px) and (hover: hover) {
+  .hc-cats .hc-cat:hover:not([aria-pressed="true"]) { background: var(--pressed); color: var(--text-strong); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .to-top, .more-btn, .more-row { transition: none; }
-  .more-btn:active, .to-top.show:active { transform: none; }
+  .nt-row { transition: none; }
+  .nt-row:active { transform: none; }
+}
+
+/* 공지 목록 쪽 번호: ‹ 이전  1 2 3  다음 › */
+.pagination { flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 20px; }
+.pg-btn { border: 1px solid transparent; line-height: 1; }
+.pg-btn.on { background: var(--primary); border-color: var(--primary); color: var(--white); font-weight: 700; }
+.pg-btn.pg-step {
+  display: inline-flex; align-items: center; gap: 2px; padding: 0 12px 0 8px;
+  border-color: var(--line-input); background: var(--white); color: var(--text-strong);
+}
+.pg-btn.pg-step:last-child { padding: 0 8px 0 12px; }
+.pg-btn.pg-step:disabled { border-color: var(--border); background: transparent; color: var(--text-3); }
+.hc-title:focus { outline: none; }
+@media (hover: hover) {
+  .pg-btn:not(.on):not(:disabled):hover { background: var(--pressed); }
+  .pg-btn.pg-step:not(:disabled):hover { background: var(--gray-50); }
 }
