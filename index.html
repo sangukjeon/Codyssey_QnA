@@ -22,7 +22,11 @@
   <meta property="og:image:alt" content="코디세이 Q&amp;A 허브 — 공지, 자주 묻는 질문, 시험 안내를 한곳에서">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
-  <link rel="stylesheet" href="css/style.css?v=20261116-2">
+  <link rel="stylesheet" href="css/style.css?v=20261119-1">
+  <script>
+    // 저장해 둔 '글자 크게'를 화면을 그리기 전에 적용 (깜빡임 방지)
+    try { if (localStorage.getItem("qna-text-size") === "large") document.documentElement.classList.add("text-lg"); } catch (e) {}
+  </script>
 </head>
 <body>
   <a class="skip-link" href="#main">본문 바로가기</a>
@@ -30,15 +34,16 @@
   <header class="head">
     <div class="wrap">
       <div class="brand-row">
-        <a class="logo" href="#home" aria-label="Codyssey Q&amp;A 허브, 한눈에 보기로 이동">
+        <a class="logo" href="#home" aria-label="Codyssey Q&amp;A 허브, 홈으로 이동">
           <img src="assets/codyssey-logo-h.png" alt="" width="102" height="22">
           <span class="brand-sep" aria-hidden="true"></span>
           <span class="brand-name">Q&amp;A 허브</span>
         </a>
+        <button class="text-size" type="button" id="textSize"><span class="ga" aria-hidden="true">가</span><span class="ts-label">글자 크게</span></button>
       </div>
-      <h1 class="sr-only" id="pageTitle">한눈에 보기</h1>
+      <h1 class="sr-only" id="pageTitle">홈</h1>
       <div class="tabs" role="tablist" aria-label="메뉴">
-        <button class="tab" role="tab" id="tab-home" data-route="home" aria-controls="main">한눈에 보기</button>
+        <button class="tab" role="tab" id="tab-home" data-route="home" aria-controls="main">홈</button>
         <button class="tab" role="tab" id="tab-faq" data-route="faq" aria-controls="main">자주 묻는 질문</button>
         <button class="tab" role="tab" id="tab-notice" data-route="notice" aria-controls="main">공지사항</button>
         <span class="tab-bar" aria-hidden="true"></span>
@@ -54,7 +59,7 @@
   <footer class="footer">
     <div class="wrap">
       <div class="notice-box" role="note">
-        <p><b>코디세이 공식 사이트가 아닙니다.</b></p>
+        <p><b>코디세이 공식 사이트가 아닙니다.</b> <span id="updated"></span></p>
         <p>교육생이 디스코드 공지와 오리엔테이션·시험 안내 자료를 개인적으로 정리한 비공식 페이지입니다. 내용이 다르면 원문 공지와 운영진 안내를 따라 주세요.</p>
         <p>문제가 되는 내용이 있거나 운영진의 요청이 있으면 바로 수정하거나 사이트를 삭제합니다.</p>
         <p>사이트 개선을 위해 쿠키 없이 개인을 식별하지 않는 익명 방문 통계(조회·클릭 수)를 수집합니다. 챗봇에 입력한 문장은 저장하지 않습니다.</p>
@@ -65,8 +70,7 @@
   <!-- 챗봇 -->
   <button class="chat-fab" type="button" id="chatOpen" aria-haspopup="dialog" aria-controls="chat">
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/><circle cx="8" cy="12" r="1.15" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.15" fill="currentColor" stroke="none"/><circle cx="16" cy="12" r="1.15" fill="currentColor" stroke="none"/></svg>
-    <span class="label">무엇이든 물어보세요</span>
-    <span class="sr-only">안내 챗봇 열기</span>
+    <span class="label">챗봇에게 질문</span>
   </button>
   <div class="scrim" id="scrim" hidden></div>
   <section class="chat" id="chat" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="chatTitle" hidden>
@@ -89,7 +93,7 @@
     </div>
     <form class="chat-form" id="chatForm" autocomplete="off">
       <label class="sr-only" for="chatInput">질문 입력</label>
-      <input id="chatInput" type="text" placeholder="예: 와이파이 비밀번호 알려 주세요" maxlength="200">
+      <input id="chatInput" type="text" placeholder="예: 와이파이 비밀번호" maxlength="200">
       <button class="btn btn-primary" type="submit" id="chatSend" aria-label="보내기" disabled>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
       </button>
@@ -98,10 +102,10 @@
 
   <!-- 방문 통계: Umami (쿠키 없음, 개인 식별 안 함). 실제 사이트 주소에서만 수집 -->
   <script defer id="umami-script" src="https://cloud.umami.is/script.js" data-website-id="78b52595-de22-4f75-b92c-4f10ca1a968a" data-auto-track="false" data-domains="sangukjeon.github.io"></script>
-  <script src="js/analytics.js?v=20261116-2"></script>
-  <script src="js/data.js?v=20261116-2"></script>
-  <script src="js/matcher.js?v=20261116-2"></script>
-  <script src="js/app.js?v=20261116-2"></script>
+  <script src="js/analytics.js?v=20261119-1"></script>
+  <script src="js/data.js?v=20261119-1"></script>
+  <script src="js/matcher.js?v=20261119-1"></script>
+  <script src="js/app.js?v=20261119-1"></script>
   <script>
     // 설치(앱으로 추가) 지원용 서비스 워커 — 캐시는 하지 않는다
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});

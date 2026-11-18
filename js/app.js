@@ -92,14 +92,22 @@
   const catIcon = (id) => `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON.cat[id]}</svg>`;
 
   /* ---------- 상태 ---------- */
-  const state = { faqCat: "all", faqQuery: "", faqPage: 1, noticeCat: "all", homeQuery: "" };
-  const FAQ_PAGE_SIZE = 8;
+  const state = { faqCat: "all", faqQuery: "", noticeCat: "all", noticeQuery: "", homeQuery: "" };
   const main = $("#main");
   const sortedNotices = () => [...NOTICES].sort((a, b) => (b.pinned - a.pinned) || 0);
+  let pendingScroll = null; // 화면을 그린 뒤 보이도록 스크롤할 요소 (예: #faq/24 로 열린 질문)
 
+  /* ---------- 날짜 ---------- */
+  const DOW = "일월화수목금토";
+  const parseDate = (s) => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
+  const today0 = () => { const t = new Date(); return new Date(t.getFullYear(), t.getMonth(), t.getDate()); };
+  const daysFrom = (s) => Math.round((parseDate(s) - today0()) / 864e5); // 오늘 0, 내일 1, 어제 -1
+  const fmtDate = (s) => { const d = parseDate(s); return `${d.getMonth() + 1}월 ${d.getDate()}일 (${DOW[d.getDay()]})`; };
+  const isNew = (s) => { const d = daysFrom(s); return d <= 0 && d > -7; }; // 게시 후 7일
+  const ddayLabel = (n) => (n === 0 ? "오늘" : n === 1 ? "내일" : `D-${n}`);
 
   /* ---------- 공통 조각 ---------- */
-  function setChrome(tab, title, crumbs) {
+  function setChrome(tab, title) {
     document.querySelectorAll(".tab").forEach((t) => {
       const on = t.dataset.route === tab;
       t.setAttribute("aria-selected", on);
@@ -162,22 +170,68 @@
   const backLink = (href, label) =>
     `<a class="back-link" href="${href}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>${esc(label)}</a>`;
 
-  function noticeCard(n) {
+  // 빈 결과 안내 (챗봇 버튼 포함)
+  const emptyBox = (title, desc) => `<div class="empty"><span class="ico">${ICON.search}</span><b>${title}</b>
+    <p>${desc}</p><button class="btn btn-tertiary btn-s" type="button" data-open-chat>챗봇에게 물어보기</button></div>`;
+  const bindEmptyChat = (box, from, q) => {
+    const b = box.querySelector("[data-open-chat]");
+    if (b) b.addEventListener("click", () => { Analytics.event("chat-open", { from }); openChat(q); });
+  };
+
+  // 공지 본문 첫 문장 (본문이 소제목·목록·표로 시작하면 요약하지 않는다)
+  const summaryOf = (body) => {
+    const first = body.split("\n").find((l) => l.trim());
+    if (!first || /^\s*[#|-]/.test(first)) return "";
+    const m = first.trim().match(/^.+?[다요]\.(?=\s|$)/);
+    return m ? m[0] : "";
+  };
+
+  function noticeCard(n, { summary = false, q = "" } = {}) {
+    const sum = summary ? summaryOf(n.body) : "";
     return `<li><a class="card" href="#notice/${n.id}">
-      <div class="card-title-row"><h3 class="card-title">${esc(n.title)}</h3>${n.files.length ? ICON.clip : ""}</div>
+      <div class="card-title-row"><h3 class="card-title">${q ? highlight(esc(n.title), q) : esc(n.title)}</h3>${n.files.length ? ICON.clip : ""}</div>
+      ${sum ? `<p class="card-sum">${esc(sum)}</p>` : ""}
       <div class="card-meta">
-        <span class="tag-row">${n.pinned ? '<span class="tag">고정</span>' : ""}<span class="tag c-${n.cat}">${catName(n.cat)}</span></span>
+        <span class="tag-row">${n.date && isNew(n.date) ? '<span class="tag tag-new">NEW</span>' : ""}${n.pinned ? '<span class="tag">중요</span>' : ""}<span class="tag c-${n.cat}">${catName(n.cat)}</span></span>
+        ${n.date ? `<span class="card-date">${fmtDate(n.date)}</span>` : ""}
         ${ICON.chevRLg}
       </div>
     </a></li>`;
   }
 
-  function faqRow(f) {
+  // 질문 줄 — PC 2단 목록: 누르면 오른쪽에 상세
+  function faqRow(f, { tag = true } = {}) {
     return `<li><a class="q-row" href="#faq/${f.id}">
       <span class="faq-mark" aria-hidden="true">Q</span>
-      <span class="q-body"><span class="q-text">${esc(f.q)}</span><span class="tag c-${f.cat}">${catName(f.cat)}</span></span>
+      <span class="q-body"><span class="q-text">${esc(f.q)}</span>${tag ? `<span class="tag c-${f.cat}">${catName(f.cat)}</span>` : ""}</span>
       <span class="chev">${ICON.chevR}</span>
     </a></li>`;
+  }
+  // 질문 줄 — 휴대폰: 누르면 그 자리에서 답이 펼쳐진다
+  function faqItem(f, { tag = true } = {}) {
+    return `<li class="q-item" id="q-${f.id}">
+      <h3 class="q-h"><button class="q-row" type="button" id="qb-${f.id}" aria-expanded="false" aria-controls="qa-${f.id}" data-id="${f.id}">
+        <span class="faq-mark" aria-hidden="true">Q</span>
+        <span class="q-body"><span class="q-text">${esc(f.q)}</span>${tag ? `<span class="tag c-${f.cat}">${catName(f.cat)}</span>` : ""}</span>
+        <span class="chev">${ICON.chevD}</span>
+      </button></h3>
+      <div class="q-panel" id="qa-${f.id}" role="region" aria-labelledby="qb-${f.id}" hidden></div>
+    </li>`;
+  }
+
+  // 비슷한 질문: 챗봇 매칭 점수가 높은 순, 모자라면 같은 분류에서 채운다
+  function similarFaqs(f, n = 3) {
+    const m = Matcher.rank(f.q, FAQS);
+    const pool = [...m.ranked.map((x) => x.f), ...m.hints, ...FAQS.filter((x) => x.cat === f.cat)];
+    return [...new Set(pool)].filter((x) => x.id !== f.id).slice(0, n);
+  }
+  // 답 본문: 답, 출처, 근거 공지, 비슷한 질문 (h 는 소제목 단계)
+  function faqAnswer(f, h = "h3") {
+    const notes = (f.related || []).map((nid) => NOTICES.find((n) => n.id === nid)).filter(Boolean);
+    const sim = similarFaqs(f);
+    return `<div class="faq-a-box">${paras(f.a)}</div>${f.src ? `<p class="faq-src">출처: ${esc(f.src)}</p>` : ""}
+      ${notes.length ? `<div class="attach info"><${h}>근거 공지</${h}><ul>${notes.map((n) => `<li><a href="#notice/${n.id}">${ICON.doc}${esc(n.title)}</a></li>`).join("")}</ul></div>` : ""}
+      ${sim.length ? `<div class="attach sim"><${h}>비슷한 질문</${h}><ul>${sim.map((x) => `<li><a href="#faq/${x.id}">${ICON.chevR}${esc(x.q)}</a></li>`).join("")}</ul></div>` : ""}`;
   }
 
   function filteredFaqs() {
@@ -187,22 +241,36 @@
       .filter((f) => !q || norm(f.q + f.a).includes(q) || f.keywords.some((k) => q.includes(norm(k)) || norm(k).includes(q)));
   }
 
-  /* ---------- 화면: 한눈에 보기 ---------- */
+  /* ---------- 화면: 홈 ---------- */
+  // 다가오는 일정 한 줄: 큰 날짜 + 일정 이름 + D-day
+  function schedRow(s) {
+    const d = parseDate(s.date);
+    const href = s.faq ? `#faq/${s.faq}` : s.notice ? `#notice/${s.notice}` : "";
+    const inner = `<span class="sched-date" aria-hidden="true"><b>${d.getDate()}</b><span>${d.getMonth() + 1}월 · ${DOW[d.getDay()]}</span></span>
+      <span class="sched-body"><span class="sched-title">${esc(s.title)}</span><span class="sr-only">${fmtDate(s.date)}</span>${s.sub ? `<span class="sched-sub">${esc(s.sub)}</span>` : ""}</span>
+      <span class="dday${s.d <= 2 ? " soon" : ""}">${ddayLabel(s.d)}</span>${href ? `<span class="chev">${ICON.chevR}</span>` : ""}`;
+    return `<li>${href ? `<a class="sched-row" href="${href}">${inner}</a>` : `<div class="sched-row">${inner}</div>`}</li>`;
+  }
+
   function renderHome() {
-    setChrome("home", "한눈에 보기", [{ label: "한눈에 보기" }]);
+    setChrome("home", "홈");
     const top = FAQS.filter((f) => f.pick).slice(0, 6);
     const notices = sortedNotices().slice(0, 3);
     const counts = (id) => FAQS.filter((f) => f.cat === id).length;
+    // 오늘 이후 일정만, 가까운 순으로 4개까지
+    const upcoming = SCHEDULE.map((s) => ({ ...s, d: daysFrom(s.date) })).filter((s) => s.d >= 0)
+      .sort((a, b) => a.d - b.d).slice(0, 4);
 
-    const HOT = ["와이파이", "장학금", "출석", "시험", "동료평가", "주차", "사물함", "퍼실"];
+    const HOT = ["와이파이", "장학금", "출석", "시험", "동료평가", "주차", "사물함", "퍼실리테이터"];
     main.innerHTML = `
       <section class="section panel hero" aria-labelledby="h-hero">
         <h2 class="hero-title" id="h-hero">무엇이 궁금하세요?</h2>
         <p class="hero-desc">디스코드에 묻기 전에 질문과 공지에서 먼저 찾아보세요.</p>
+        <p class="hero-meta">내용 업데이트 ${fmtDate(UPDATED)}</p>
         <div class="search hero-search" role="search">
           ${ICON.search}
           <label class="sr-only" for="homeSearch">질문과 공지 검색</label>
-          <input id="homeSearch" type="search" enterkeyhint="search" autocomplete="off" placeholder="예: 와이파이, 장학금, 시험 시간" value="${esc(state.homeQuery)}">
+          <input id="homeSearch" type="search" enterkeyhint="search" autocomplete="off" placeholder="예: 와이파이, 장학금" value="${esc(state.homeQuery)}">
           <button class="search-clear" type="button" id="homeClear" aria-label="검색어 지우기" ${state.homeQuery ? "" : "hidden"}>${ICON.close}</button>
         </div>
         <div class="chips hero-chips" role="group" aria-label="자주 찾는 키워드">
@@ -211,12 +279,22 @@
       </section>
       <div id="homeResults" aria-live="polite"></div>
       <div id="homeSections">
+      ${upcoming.length ? `<section class="section panel home-sched" aria-labelledby="h-sched">
+        <div class="section-head">
+          <div>
+            <h2 class="section-title" id="h-sched">다가오는 일정</h2>
+            <p class="section-desc">공지에 나온 정해진 날짜만 모았습니다</p>
+          </div>
+        </div>
+        <ul class="sched-list">${upcoming.map(schedRow).join("")}</ul>
+      </section>` : ""}
+
       <section class="section panel" aria-labelledby="h-notice">
         <div class="section-head">
           <h2 class="section-title" id="h-notice">주요 공지</h2>
           <a class="more-link" href="#notice">전체 보기 ${ICON.chevR}</a>
         </div>
-        <ul class="card-list">${notices.map(noticeCard).join("")}</ul>
+        <ul class="card-list">${notices.map((n) => noticeCard(n)).join("")}</ul>
       </section>
 
       <section class="section panel" aria-labelledby="h-top">
@@ -227,12 +305,12 @@
           </div>
           <a class="more-link" href="#faq">전체 보기 ${ICON.chevR}</a>
         </div>
-        <ol class="rank-list">${top.map((f, i) => `<li><a class="rank-row" href="#faq/${f.id}">
-          <span class="faq-mark" aria-hidden="true">Q</span><span class="rank-q">${esc(f.q)}</span><span class="tag c-${f.cat}">${catName(f.cat)}</span><span class="chev">${ICON.chevR}</span>
+        <ol class="rank-list">${top.map((f) => `<li><a class="rank-row" href="#faq/${f.id}">
+          <span class="faq-mark" aria-hidden="true">Q</span><span class="q-body"><span class="rank-q">${esc(f.q)}</span><span class="tag c-${f.cat}">${catName(f.cat)}</span></span><span class="chev">${ICON.chevR}</span>
         </a></li>`).join("")}</ol>
       </section>
 
-      <section class="section panel" aria-labelledby="h-cat">
+      <section class="section panel home-cat" aria-labelledby="h-cat">
         <div class="section-head"><h2 class="section-title" id="h-cat">분류별로 찾기</h2></div>
         <div class="cat-grid">${CATEGORIES.filter((c) => c.id !== "all").map((c) => `
           <button class="cat-tile c-${c.id}" type="button" data-cat="${c.id}">
@@ -281,50 +359,68 @@
     const faqs = [...new Set([...exact, ...extra])];
     const notices = sortedNotices().filter((n) => hasAll(n.title + n.body))
       .sort((a, b) => hasAll(b.title) - hasAll(a.title));
-    return { faqs, notices };
+    return { faqs, notices, best: m.best };
   }
+
+  // 검색 결과 맨 위: 챗봇과 같은 방식으로 찾은 가장 가까운 답을 바로 펼쳐 보여 준다
+  const answerCard = (f) => `<section class="section panel answer-card" aria-labelledby="h-ans">
+      <p class="answer-kicker">${ICON.check}가장 가까운 답</p>
+      <h2 class="answer-q" id="h-ans"><span class="faq-mark" aria-hidden="true">Q</span> ${esc(f.q)}</h2>
+      <div class="faq-a-box">${paras(f.a)}</div>
+      <div class="answer-actions">
+        <a class="btn btn-tertiary btn-s" href="#faq/${f.id}">근거·비슷한 질문 보기</a>
+        <button class="btn btn-tertiary btn-s" type="button" data-open-chat>챗봇에게 더 묻기</button>
+      </div>
+    </section>`;
 
   function drawHomeResults() {
     const box = $("#homeResults"), sections = $("#homeSections");
     const q = state.homeQuery.trim();
     sections.hidden = !!q;
     if (!q) { box.innerHTML = ""; return; }
-    const { faqs, notices } = searchAll(q);
+    const { faqs, notices, best } = searchAll(q);
     if (!faqs.length && !notices.length) {
-      box.innerHTML = `<div class="empty"><span class="ico">${ICON.search}</span><b>'${esc(q)}'에 맞는 내용을 찾지 못했습니다</b>
-        <p>다른 말로 찾아보거나, 챗봇에 물어보세요.</p>
-        <button class="btn btn-tertiary btn-s" type="button" data-open-chat>챗봇에 물어보기</button></div>`;
-      box.querySelector("[data-open-chat]").addEventListener("click", () => { Analytics.event("chat-open", { from: "home-empty" }); openChat(q); });
+      box.innerHTML = emptyBox(`'${esc(q)}'에 맞는 내용을 찾지 못했습니다`, "다른 말로 찾아보거나, 챗봇에게 물어보세요.");
+      bindEmptyChat(box, "home-empty", q);
       return;
     }
+    const rest = best ? faqs.filter((f) => f !== best) : faqs;
     const FAQ_MAX = 6, NOTICE_MAX = 4;
+    const more = (attr) => `<button class="more-link" type="button" ${attr}>모두 보기 ${ICON.chevR}</button>`;
     box.innerHTML = `
-      ${faqs.length ? `<section class="section panel" aria-labelledby="h-rf">
-        <div class="section-head"><h2 class="section-title" id="h-rf">질문 <span class="cnt">${faqs.length}</span></h2>
-          ${faqs.length > FAQ_MAX ? `<button class="more-link" type="button" data-more-faq>모두 보기 ${ICON.chevR}</button>` : ""}</div>
-        <ul class="rank-list">${faqs.slice(0, FAQ_MAX).map((f) => `<li><a class="rank-row" href="#faq/${f.id}">
-          <span class="faq-mark" aria-hidden="true">Q</span><span class="rank-q">${highlight(esc(f.q), q)}</span><span class="tag c-${f.cat}">${catName(f.cat)}</span><span class="chev">${ICON.chevR}</span>
+      ${best ? answerCard(best) : ""}
+      ${rest.length ? `<section class="section panel" aria-labelledby="h-rf">
+        <div class="section-head"><h2 class="section-title" id="h-rf">${best ? "다른 질문" : "질문"} <span class="cnt">${rest.length}</span></h2>
+          ${rest.length > FAQ_MAX ? more("data-more-faq") : ""}</div>
+        <ul class="rank-list">${rest.slice(0, FAQ_MAX).map((f) => `<li><a class="rank-row" href="#faq/${f.id}">
+          <span class="faq-mark" aria-hidden="true">Q</span><span class="q-body"><span class="rank-q">${highlight(esc(f.q), q)}</span><span class="tag c-${f.cat}">${catName(f.cat)}</span></span><span class="chev">${ICON.chevR}</span>
         </a></li>`).join("")}</ul>
       </section>` : ""}
       ${notices.length ? `<section class="section panel" aria-labelledby="h-rn">
-        <div class="section-head"><h2 class="section-title" id="h-rn">공지 <span class="cnt">${notices.length}</span></h2></div>
+        <div class="section-head"><h2 class="section-title" id="h-rn">공지 <span class="cnt">${notices.length}</span></h2>
+          ${notices.length > NOTICE_MAX ? more("data-more-notice") : ""}</div>
         <ul class="rank-list">${notices.slice(0, NOTICE_MAX).map((n) => `<li><a class="rank-row" href="#notice/${n.id}">
-          <span class="doc-mark" aria-hidden="true">${ICON.doc}</span><span class="rank-q">${highlight(esc(n.title), q)}</span><span class="tag c-${n.cat}">${catName(n.cat)}</span><span class="chev">${ICON.chevR}</span>
+          <span class="doc-mark" aria-hidden="true">${ICON.doc}</span><span class="q-body"><span class="rank-q">${highlight(esc(n.title), q)}</span><span class="tag c-${n.cat}">${catName(n.cat)}</span></span><span class="chev">${ICON.chevR}</span>
         </a></li>`).join("")}</ul>
       </section>` : ""}`;
-    const more = box.querySelector("[data-more-faq]");
-    if (more) more.addEventListener("click", () => { state.faqQuery = q; state.faqCat = "all"; state.faqPage = 1; location.hash = "#faq"; });
+    const moreFaq = box.querySelector("[data-more-faq]");
+    if (moreFaq) moreFaq.addEventListener("click", () => { state.faqQuery = q; state.faqCat = "all"; location.hash = "#faq"; });
+    const moreNotice = box.querySelector("[data-more-notice]");
+    if (moreNotice) moreNotice.addEventListener("click", () => { state.noticeQuery = q; state.noticeCat = "all"; location.hash = "#notice"; });
+    bindEmptyChat(box, "answer-card", q);
   }
 
   /* ---------- 화면: 자주 묻는 질문 ---------- */
-  function renderFaq(root = main) {
-    setChrome("faq", "자주 묻는 질문", [{ label: "자주 묻는 질문" }]);
+  function renderFaq(root = main, openId = null) {
+    setChrome("faq", "자주 묻는 질문");
+    // 주소(#faq/24)로 연 질문이 지금 고른 분류·검색어에 안 걸리면 필터를 풀어서 보여 준다
+    if (openId && !filteredFaqs().some((f) => f.id === openId)) { state.faqCat = "all"; state.faqQuery = ""; }
 
     root.innerHTML = `
       <div class="search" role="search">
         ${ICON.search}
         <label class="sr-only" for="faqSearch">질문 검색</label>
-        <input id="faqSearch" type="search" placeholder="궁금한 내용을 검색하세요 (예: 와이파이, 사물함)" value="${esc(state.faqQuery)}">
+        <input id="faqSearch" type="search" placeholder="질문 검색 (예: 사물함)" value="${esc(state.faqQuery)}">
         <button class="search-clear" type="button" id="faqClear" aria-label="검색어 지우기" ${state.faqQuery ? "" : "hidden"}>${ICON.close}</button>
       </div>
       <div class="chips scroll" style="margin-top:14px" role="group" aria-label="분류">
@@ -341,109 +437,129 @@
     const input = $("#faqSearch");
     const clear = $("#faqClear");
     input.addEventListener("input", () => {
-      state.faqQuery = input.value; state.faqPage = 1;
+      state.faqQuery = input.value;
       clear.hidden = !input.value;
       drawFaqList();
     });
-    clear.addEventListener("click", () => { input.value = ""; state.faqQuery = ""; state.faqPage = 1; clear.hidden = true; input.focus(); drawFaqList(); });
+    clear.addEventListener("click", () => { input.value = ""; state.faqQuery = ""; clear.hidden = true; input.focus(); drawFaqList(); });
     root.querySelectorAll(".chip[data-cat]").forEach((b) => b.addEventListener("click", () => {
-      state.faqCat = b.dataset.cat; state.faqPage = 1;
+      state.faqCat = b.dataset.cat;
       Analytics.event("category", { cat: b.dataset.cat, from: "faq" });
       root.querySelectorAll(".chip[data-cat]").forEach((x) => x.setAttribute("aria-pressed", x === b));
       drawFaqList();
     }));
+    $("#faqResult").addEventListener("click", (e) => {
+      const b = e.target.closest("button.q-row");
+      if (b) toggleFaq(b);
+    });
 
     drawFaqList();
+    if (openId) {
+      const b = root.querySelector(`button.q-row[data-id="${openId}"]`);
+      if (b) { toggleFaq(b, true, { track: false }); pendingScroll = b.closest(".q-item"); }
+    }
   }
 
   function drawFaqList() {
     const list = filteredFaqs();
-    const pages = Math.max(1, Math.ceil(list.length / FAQ_PAGE_SIZE));
-    state.faqPage = Math.min(state.faqPage, pages);
-    const from = (state.faqPage - 1) * FAQ_PAGE_SIZE;
-    const shown = list.slice(from, from + FAQ_PAGE_SIZE);
-
+    const linkMode = !!$("#listPane"); // PC 2단이면 줄을 눌러 오른쪽에 상세, 아니면 그 자리에서 펼침
     $("#faqCount").innerHTML = `<b>${list.length}</b>건`;
     const box = $("#faqResult");
     if (!list.length) {
-      box.innerHTML = `<div class="empty"><span class="ico">${ICON.search}</span><b>찾는 질문이 아직 정리되지 않았습니다</b>
-        <p>챗봇에 물어보거나 디스코드 allinone-문의사항 채널에 질문해 주세요.</p>
-        <button class="btn btn-tertiary btn-s" type="button" data-open-chat>챗봇에 물어보기</button></div>`;
-      box.querySelector("[data-open-chat]").addEventListener("click", () => { Analytics.event("chat-open", { from: "faq-empty" }); openChat(state.faqQuery); });
+      box.innerHTML = emptyBox("찾는 질문이 아직 정리되지 않았습니다", "챗봇에게 물어보거나 디스코드 allinone-문의사항 채널에 질문해 주세요.");
+      bindEmptyChat(box, "faq-empty", state.faqQuery);
       return;
     }
-    box.innerHTML = `<ul class="q-list">${shown.map(faqRow).join("")}</ul>${pagination(state.faqPage, pages)}`;
+    const row = (f, opts) => (linkMode ? faqRow(f, opts) : faqItem(f, opts));
+    // 전체 + 검색어 없음: 분류별로 묶어 보여 준다 (분류 이름이 제목이라 줄마다 태그는 빼고)
+    const grouped = state.faqCat === "all" && !state.faqQuery.trim();
+    box.innerHTML = grouped
+      ? CATEGORIES.filter((c) => c.id !== "all").map((c) => {
+          const items = list.filter((f) => f.cat === c.id);
+          return items.length ? `<h2 class="q-group">${c.name}<span class="n">${items.length}</span></h2>
+            <ul class="q-list">${items.map((f) => row(f, { tag: false })).join("")}</ul>` : "";
+        }).join("")
+      : `<ul class="q-list">${list.map((f) => row(f, { tag: state.faqCat === "all" })).join("")}</ul>`;
     markSelected();
-    box.querySelectorAll(".pg-btn[data-page]").forEach((b) => b.addEventListener("click", () => {
-      state.faqPage = +b.dataset.page;
-      drawFaqList();
-      $("#faqCount").scrollIntoView({ block: "start" });
-      window.scrollBy(0, -72);
-    }));
   }
 
-  function pagination(cur, pages) {
-    if (pages <= 1) return "";
-    const prev = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg>';
-    const nums = Array.from({ length: pages }, (_, i) => i + 1).map((n) =>
-      `<button class="pg-btn${n === cur ? " on" : ""}" type="button" data-page="${n}" ${n === cur ? 'aria-current="page"' : ""} aria-label="${n}쪽">${n}</button>`).join("");
-    return `<nav class="pagination" aria-label="페이지">
-      <button class="pg-btn" type="button" ${cur > 1 ? `data-page="${cur - 1}"` : "disabled"} aria-label="이전 쪽">${prev}</button>
-      ${nums}
-      <button class="pg-btn" type="button" ${cur < pages ? `data-page="${cur + 1}"` : "disabled"} aria-label="다음 쪽">${ICON.chevR}</button>
-    </nav>`;
+  // 휴대폰 질문 펼치기/접기. 한 번에 하나만 열고, 주소도 #faq/24 로 맞춰 링크 공유·새로고침이 되게 한다
+  function toggleFaq(btn, open = btn.getAttribute("aria-expanded") !== "true", { track = true } = {}) {
+    const f = FAQS.find((x) => x.id === +btn.dataset.id);
+    if (!f) return;
+    document.querySelectorAll('#faqResult button.q-row[aria-expanded="true"]').forEach((b) => {
+      if (b === btn) return;
+      b.setAttribute("aria-expanded", "false");
+      $(`#qa-${b.dataset.id}`).hidden = true;
+    });
+    const panel = $(`#qa-${f.id}`);
+    if (open && !panel.innerHTML.trim()) panel.innerHTML = `${faqAnswer(f, "h4")}<div class="q-panel-foot">${copyBtn(`#faq/${f.id}`)}</div>`;
+    btn.setAttribute("aria-expanded", String(open));
+    panel.hidden = !open;
+    history.replaceState(null, "", open ? `#faq/${f.id}` : "#faq");
+    // 위에서 열려 있던 답이 접히며 화면이 밀리면, 누른 질문이 탭 줄 아래에 보이게 맞춘다
+    const top = btn.getBoundingClientRect().top, bar = $(".tabs").getBoundingClientRect().bottom;
+    if (top < bar) window.scrollBy(0, top - bar - 8);
+    if (open && track) Analytics.page(`#faq/${f.id}`, `Q. ${f.q}`.replace(/⁠/g, ""));
   }
 
-  function renderFaqDetail(id, root = main) {
+  // PC 2단 오른쪽 질문 상세
+  function renderFaqDetail(id, root) {
     const f = FAQS.find((x) => x.id === id);
-    if (!f) return root === main ? renderFaq() : (root.innerHTML = splitEmpty("질문"));
-    setChrome("faq", "자주 묻는 질문", [{ label: "자주 묻는 질문", href: "#faq" }, { label: "상세" }]);
-    // 이전/다음은 지금 목록(필터·검색) 기준, 목록에 없으면 전체 기준
-    let list = filteredFaqs();
-    if (!list.some((x) => x.id === id)) list = FAQS;
-    const i = list.findIndex((x) => x.id === id);
-    const prev = list[i - 1], next = list[i + 1];
-    const notes = (f.related || []).map((nid) => NOTICES.find((n) => n.id === nid)).filter(Boolean);
-    const nav = (x, label) => x
-      ? `<a href="#faq/${x.id}"><span>${label}</span><span>${esc(x.q)}</span></a>`
-      : `<a aria-disabled="true"><span>${label}</span><span>${label}이 없습니다</span></a>`;
-
-    root.innerHTML = `${backLink("#faq", "자주 묻는 질문")}
-      <article class="detail">
+    if (!f) { root.innerHTML = splitEmpty("질문"); return; }
+    setChrome("faq", "자주 묻는 질문");
+    root.innerHTML = `<article class="detail">
         <div class="detail-head">
           <div class="head-row"><div class="tag-row"><span class="tag c-${f.cat}">${catName(f.cat)}</span></div>${copyBtn(`#faq/${f.id}`)}</div>
           <h2><span class="faq-mark" aria-hidden="true">Q</span> ${esc(f.q)}</h2>
         </div>
-        <div class="detail-body"><div class="faq-a-box">${paras(f.a)}</div>${f.src ? `<p class="faq-src">출처: ${esc(f.src)}</p>` : ""}</div>
-        ${notes.length ? `<div class="attach info"><h3>근거 공지</h3><ul>${notes.map((n) => `<li><a href="#notice/${n.id}">${ICON.doc}${esc(n.title)}</a></li>`).join("")}</ul></div>` : ""}
-        <ul class="pager-nav"><li>${nav(prev, "이전 질문")}</li><li>${nav(next, "다음 질문")}</li></ul>
-      </article>
-      <div class="back-row"><a class="btn btn-tertiary btn-block" href="#faq">목록으로</a></div>`;
+        <div class="detail-body">${faqAnswer(f)}</div>
+      </article>`;
   }
 
   /* ---------- 화면: 공지사항 ---------- */
-  const filteredNotices = () => sortedNotices().filter((n) => state.noticeCat === "all" || n.cat === state.noticeCat);
+  const filteredNotices = () => {
+    const words = state.noticeQuery.trim().split(/\s+/).map(Matcher.norm).filter(Boolean);
+    return sortedNotices()
+      .filter((n) => state.noticeCat === "all" || n.cat === state.noticeCat)
+      .filter((n) => { if (!words.length) return true; const t = Matcher.norm(n.title + n.body); return words.every((w) => t.includes(w)); });
+  };
 
   function renderNotice(root = main) {
-    setChrome("notice", "공지사항", [{ label: "공지사항" }]);
+    setChrome("notice", "공지사항");
     // 공지가 있는 분류만 칩으로 보여 준다
     const cats = CATEGORIES.filter((c) => c.id === "all" || NOTICES.some((n) => n.cat === c.id));
     if (!cats.some((c) => c.id === state.noticeCat)) state.noticeCat = "all";
     root.innerHTML = `
-      <div class="chips scroll" role="group" aria-label="분류">
+      <div class="search" role="search">
+        ${ICON.search}
+        <label class="sr-only" for="noticeSearch">공지 검색</label>
+        <input id="noticeSearch" type="search" placeholder="공지 검색 (예: 시험)" value="${esc(state.noticeQuery)}">
+        <button class="search-clear" type="button" id="noticeClear" aria-label="검색어 지우기" ${state.noticeQuery ? "" : "hidden"}>${ICON.close}</button>
+      </div>
+      <div class="chips scroll" style="margin-top:14px" role="group" aria-label="분류">
         ${cats.map((c) => {
           const n = c.id === "all" ? NOTICES.length : NOTICES.filter((x) => x.cat === c.id).length;
           return `<button class="chip" type="button" data-cat="${c.id}" aria-pressed="${state.noticeCat === c.id}">${c.name}<span class="n">${n}</span></button>`;
         }).join("")}
       </div>
       <div class="list-toolbar" style="margin-top:16px"><span class="list-count" id="noticeCount"></span></div>
-      <ul class="card-list" id="noticeList"></ul>`;
+      <div id="noticeResult"></div>`;
     const draw = () => {
-      const list = filteredNotices();
+      const list = filteredNotices(), q = state.noticeQuery.trim();
       $("#noticeCount").innerHTML = `<b>${list.length}</b>건`;
-      $("#noticeList").innerHTML = list.map(noticeCard).join("");
+      const box = $("#noticeResult");
+      if (!list.length) {
+        box.innerHTML = emptyBox(q ? `'${esc(q)}'에 맞는 공지를 찾지 못했습니다` : "이 분류에는 공지가 없습니다", "다른 말로 찾아보거나, 챗봇에게 물어보세요.");
+        bindEmptyChat(box, "notice-empty", q);
+        return;
+      }
+      box.innerHTML = `<ul class="card-list" id="noticeList">${list.map((n) => noticeCard(n, { summary: true, q })).join("")}</ul>`;
       markSelected();
     };
+    const input = $("#noticeSearch"), clear = $("#noticeClear");
+    input.addEventListener("input", () => { state.noticeQuery = input.value; clear.hidden = !input.value; draw(); });
+    clear.addEventListener("click", () => { input.value = ""; state.noticeQuery = ""; clear.hidden = true; input.focus(); draw(); });
     root.querySelectorAll(".chip[data-cat]").forEach((b) => b.addEventListener("click", () => {
       state.noticeCat = b.dataset.cat;
       Analytics.event("category", { cat: b.dataset.cat, from: "notice" });
@@ -454,22 +570,22 @@
   }
 
   function renderNoticeDetail(id, root = main) {
-    // 이전/다음은 지금 고른 분류 기준, 그 분류에 없으면 전체 기준
+    // 이전/다음은 지금 고른 분류·검색 기준, 거기에 없으면 전체 기준
     let all = filteredNotices();
     if (!all.some((n) => n.id === id)) all = sortedNotices();
     const i = all.findIndex((n) => n.id === id);
     if (i < 0) return root === main ? renderNotice() : (root.innerHTML = splitEmpty("공지"));
     const n = all[i];
-    setChrome("notice", "공지사항", [{ label: "공지사항", href: "#notice" }, { label: "상세" }]);
+    setChrome("notice", "공지사항");
     const prev = all[i - 1], next = all[i + 1];
     const related = FAQS.filter((f) => (f.related || []).includes(n.id));
 
     root.innerHTML = `${backLink("#notice", "공지사항")}
       <article class="detail">
         <div class="detail-head">
-          <div class="head-row"><div class="tag-row">${n.pinned ? '<span class="tag">고정</span>' : ""}<span class="tag c-${n.cat}">${catName(n.cat)}</span></div>${copyBtn(`#notice/${n.id}`)}</div>
+          <div class="head-row"><div class="tag-row">${n.date && isNew(n.date) ? '<span class="tag tag-new">NEW</span>' : ""}${n.pinned ? '<span class="tag">중요</span>' : ""}<span class="tag c-${n.cat}">${catName(n.cat)}</span></div>${copyBtn(`#notice/${n.id}`)}</div>
           <h2>${esc(n.title)}</h2>
-          <p class="source">출처: ${esc(sourceName(n.source))}</p>
+          <p class="source">${n.date ? `게시 ${fmtDate(n.date)} · ` : ""}출처: ${esc(sourceName(n.source))}</p>
         </div>
         ${toc(n.body)}
         <div class="detail-body">${paras(n.body, true)}</div>
@@ -493,6 +609,23 @@
   }
   window.addEventListener("resize", moveTabBar);
   document.fonts && document.fonts.ready.then(moveTabBar);
+
+  /* ---------- 글자 크기 (보통 ↔ 크게 125%) ---------- */
+  // 처음 그릴 때 깜빡이지 않도록 index.html <head> 에서 저장된 값을 먼저 적용해 둔다
+  const TEXT_KEY = "qna-text-size";
+  const textBtn = $("#textSize");
+  const isLarge = () => document.documentElement.classList.contains("text-lg");
+  const syncTextBtn = () => { textBtn.querySelector(".ts-label").textContent = isLarge() ? "글자 작게" : "글자 크게"; };
+  textBtn.addEventListener("click", () => {
+    const large = !isLarge();
+    document.documentElement.classList.toggle("text-lg", large);
+    try { localStorage.setItem(TEXT_KEY, large ? "large" : "normal"); } catch (e) { /* 저장 안 되면 이번 방문에만 적용 */ }
+    syncTextBtn();
+    moveTabBar(); // 탭 폭이 바뀌었으니 밑줄도 다시 맞춘다 (offsetWidth 를 읽는 순간 새 크기로 계산됨)
+    toast(large ? "글자를 크게 바꿨습니다" : "글자를 원래 크기로 바꿨습니다");
+    Analytics.event("text-size", { size: large ? "large" : "normal" });
+  });
+  syncTextBtn();
 
   /* ---------- PC 2단 (넓은 화면에서 왼쪽 목록 + 오른쪽 상세) ---------- */
   const WIDE = window.matchMedia("(min-width: 1024px)");
@@ -532,19 +665,20 @@
       }
       const pane = $("#detailPane");
       if (id) { if (page === "faq") renderFaqDetail(+id, pane); else renderNoticeDetail(+id, pane); }
-      else { setChrome(page, page === "faq" ? "자주 묻는 질문" : "공지사항", []); pane.innerHTML = splitEmpty(page === "faq" ? "질문" : "공지"); }
+      else { setChrome(page, page === "faq" ? "자주 묻는 질문" : "공지사항"); pane.innerHTML = splitEmpty(page === "faq" ? "질문" : "공지"); }
       pane.scrollTop = 0;
       markSelected();
       return;
     }
     splitKind = null;
     main.dataset.view = "single";
-    if (page === "faq" && id) renderFaqDetail(+id);
-    else if (page === "faq") renderFaq();
+    if (page === "faq") renderFaq(main, id ? +id : null);
     else if (page === "notice" && id) renderNoticeDetail(+id);
     else if (page === "notice") renderNotice();
     else { renderHome(); main.dataset.view = "home"; }
     window.scrollTo(0, 0);
+    // 주소로 연 질문은 맨 위로 올린 뒤 그 질문 위치로 스크롤
+    if (pendingScroll) { pendingScroll.scrollIntoView({ block: "start" }); pendingScroll = null; }
   }
   window.addEventListener("hashchange", route);
   WIDE.addEventListener("change", () => { splitKind = null; renderRoute(); });
@@ -560,7 +694,7 @@
     });
   });
 
-  // 로고: 홈 검색어를 비우고 한눈에 보기 첫 화면으로 (이미 홈이면 hashchange 가 안 생기므로 직접 다시 그림)
+  // 로고: 홈 검색어를 비우고 홈 첫 화면으로 (이미 홈이면 hashchange 가 안 생기므로 직접 다시 그림)
   $(".logo").addEventListener("click", (e) => {
     state.homeQuery = "";
     Analytics.event("logo-reset");
@@ -597,6 +731,19 @@
 
   fab.addEventListener("click", () => { Analytics.event("chat-open", { from: "button" }); openChat(); });
   $("#chatClose").addEventListener("click", closeChat);
+
+  // 챗봇 버튼이 글을 가리지 않게: 아래로 읽는 동안은 비켜 있고, 위로 올리거나 맨 끝에 닿으면 다시 나온다
+  let lastY = window.scrollY;
+  window.addEventListener("scroll", () => {
+    const y = window.scrollY, dy = y - lastY;
+    if (Math.abs(dy) < 6) return;
+    const atEnd = window.innerHeight + y >= document.documentElement.scrollHeight - 40;
+    fab.classList.toggle("tucked", dy > 0 && y > 120 && !atEnd);
+    lastY = y;
+  }, { passive: true });
+
+  // 화면 아래 안내에 내용 업데이트 날짜
+  $("#updated").textContent = `내용 업데이트: ${fmtDate(UPDATED)}`;
   scrim.addEventListener("click", closeChat);
   document.addEventListener("keydown", (e) => {
     if (chat.hidden) return;
@@ -644,6 +791,7 @@
 
   function ask(text) {
     addMsg("user", esc(text));
+    $(".chat-suggest").hidden = true; // 첫 질문 뒤에는 추천 질문을 접어 대화 공간을 넓힌다
     const m = Matcher.rank(text, FAQS); // js/matcher.js
     const best = m.best;
     const extraFaq = m.others;
