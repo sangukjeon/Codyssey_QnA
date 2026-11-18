@@ -639,28 +639,22 @@ mark { background: #fff1b8; color: inherit; border-radius: 3px; padding: 0 1px; 
 .bubble .tbl { font-size: 0.9375rem; line-height: 1.46; }
 .bubble .tbl th, .bubble .tbl td { padding: 8px 10px; }
 
-/* ===== PC 2단 ===== */
+/* ===== PC 넓은 화면: 질문·공지 목록은 오른쪽 빈 칸 없이 2단으로 ===== */
 @media (min-width: 1024px) {
   .wrap { max-width: 1120px; }
   main[data-view="single"] { max-width: 720px; margin: 0 auto; }
-  .split { display: grid; grid-template-columns: 26.25rem minmax(0, 1fr); gap: 20px; align-items: start; }
-  .split-list { min-width: 0; }
-  .split-detail {
-    position: sticky; top: 80px; min-width: 0;
-    max-height: calc(100vh - 96px); padding-bottom: 80px; overflow-y: auto; overscroll-behavior: contain;
-    border-radius: var(--r-400);
-  }
-  .split .back-link, .split .back-row { display: none; }
-  .split-empty {
-    display: grid; place-items: center; gap: 10px; min-height: 320px; padding: 40px 24px; text-align: center;
-    background: var(--white); border: 1px dashed var(--border); border-radius: var(--r-400); color: var(--text-secondary);
-  }
-  .split-empty .ico { width: 48px; height: 48px; border-radius: 999px; display: grid; place-items: center; background: var(--gray-100); color: var(--text-tertiary); transform: rotate(180deg); }
-  .split-empty b { font-size: 1rem; font-weight: 600; }
-  .q-row[aria-current="true"] { background: var(--blue-50); }
-  .q-row[aria-current="true"] .q-text { color: var(--primary); }
-  .card[aria-current="true"] { border-color: var(--primary); background: var(--blue-50); }
-  .split .chips.scroll { flex-wrap: wrap; margin: 0; padding: 2px 0 4px; }
+  main[data-view="list"] .search { max-width: 560px; }
+  /* 자주 묻는 질문(전체): 분류 묶음을 2단으로. 한쪽이 펼쳐져도 옆 묶음은 위에 붙어 있게 */
+  #faqResult.grouped { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 24px; align-items: start; }
+  #faqResult.grouped .q-sec { min-width: 0; }
+  #faqResult.grouped .q-group { margin-top: 4px; }
+  /* 분류를 고르거나 검색했을 때: 질문 줄을 2단으로 (줄 경계선은 2번째 칸부터 위쪽에만) */
+  #faqResult .q-list.flat { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 40px; align-items: start; }
+  #faqResult .q-list.flat > li:nth-child(2) { border-top: 0; }
+  /* 공지 카드 2단, 같은 줄 카드는 높이를 맞춘다 */
+  #noticeList { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  #noticeList > li > .card { height: 100%; display: flex; flex-direction: column; }
+  #noticeList .card > .card-meta { margin-top: auto; padding-top: 8px; } /* 분류 태그는 카드 맨 아래로 맞춤 */
 }
 
 /* ===== PC 홈: 한 화면에 나란히 ===== */
@@ -806,7 +800,7 @@ a.sched-row:active { transform: scale(.96); background: var(--pressed); }
 
 /* 자주 묻는 질문: 분류별 묶음 + 그 자리에서 펼치기 */
 .q-group { display: flex; align-items: baseline; gap: 6px; margin: 24px 4px 10px; font-size: 1.125rem; line-height: 1.4; font-weight: 700; color: var(--text-strong); }
-#faqResult > .q-group:first-child { margin-top: 4px; }
+#faqResult > .q-sec:first-child .q-group { margin-top: 4px; }
 .q-group .n { font-size: 0.9375rem; font-weight: 700; color: var(--primary); font-variant-numeric: tabular-nums; }
 .q-h { margin: 0; font: inherit; }
 button.q-row { text-align: left; }

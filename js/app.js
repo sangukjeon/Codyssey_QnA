@@ -202,14 +202,6 @@
     </a></li>`;
   }
 
-  // 질문 줄 — PC 2단 목록: 누르면 오른쪽에 상세
-  function faqRow(f, { tag = true, attrs = "" } = {}) {
-    return `<li${attrs}><a class="q-row" href="#faq/${f.id}">
-      <span class="faq-mark" aria-hidden="true">Q</span>
-      <span class="q-body"><span class="q-text">${esc(f.q)}</span>${tag ? `<span class="tag c-${f.cat}">${catName(f.cat)}</span>` : ""}</span>
-      <span class="chev">${ICON.chevR}</span>
-    </a></li>`;
-  }
   // 질문 줄 — 휴대폰: 누르면 그 자리에서 답이 펼쳐진다
   function faqItem(f, { tag = true, attrs = "" } = {}) {
     return `<li class="q-item" id="q-${f.id}"${attrs}>
@@ -467,7 +459,6 @@
 
   function drawFaqList() {
     const list = filteredFaqs();
-    const linkMode = !!$("#listPane"); // PC 2단이면 줄을 눌러 오른쪽에 상세, 아니면 그 자리에서 펼침
     $("#faqCount").innerHTML = `<b>${list.length}</b>건`;
     const box = $("#faqResult");
     if (!list.length) {
@@ -475,10 +466,12 @@
       bindEmptyChat(box, "faq-empty", state.faqQuery);
       return;
     }
-    const row = (f, opts) => (linkMode ? faqRow(f, opts) : faqItem(f, opts));
+    const row = faqItem;
     // 전체 + 검색어 없음: 분류별로 묶어 보여 준다 (분류 이름이 제목이라 줄마다 태그는 빼고)
     // 분류마다 앞의 3개만 보이고 나머지는 '더 보기'로 그 자리에서 펼친다. 분류를 고르거나 검색하면 전부 보인다
+    // 넓은 화면에서는 분류 묶음(grouped)과 질문 줄(flat)을 2단으로 놓아 한 화면에 더 많이 보이게 한다
     const grouped = state.faqCat === "all" && !state.faqQuery.trim();
+    box.classList.toggle("grouped", grouped);
     if (grouped) {
       // 주소로 연 질문(#faq/24)이 뒤쪽에 있으면 그 분류는 펼쳐 둔다
       const cur = FAQS.find((f) => location.hash === `#faq/${f.id}`);
@@ -493,11 +486,10 @@
           const open = !foldable || state.faqOpen.has(c.id);
           const rows = items.map((f, i) => row(f, { tag: false, attrs: foldable && i >= FAQ_PREVIEW ? ` data-extra${open ? "" : " hidden"}` : "" })).join("");
           const more = foldable ? `<li class="more-li"><button class="more-row" type="button" data-group="${c.id}" aria-expanded="${open}" aria-controls="ql-${c.id}"><span class="t">${groupMoreLabel(c.id, items.length - FAQ_PREVIEW, open)}</span>${ICON.chevD}</button></li>` : "";
-          return `<h2 class="q-group" id="g-${c.id}">${c.name}<span class="n">${items.length}</span></h2>
-            <ul class="q-list" id="ql-${c.id}">${rows}${more}</ul>`;
+          return `<section class="q-sec" aria-labelledby="g-${c.id}"><h2 class="q-group" id="g-${c.id}">${c.name}<span class="n">${items.length}</span></h2>
+            <ul class="q-list" id="ql-${c.id}">${rows}${more}</ul></section>`;
         }).join("")
-      : `<ul class="q-list">${list.map((f) => row(f, { tag: state.faqCat === "all" })).join("")}</ul>`;
-    markSelected();
+      : `<ul class="q-list flat">${list.map((f) => row(f, { tag: state.faqCat === "all" })).join("")}</ul>`;
   }
 
   const groupMoreLabel = (cat, n, open) => (open ? `${catName(cat)} 질문 접기` : `${catName(cat)} 질문 ${n}개 더 보기`);
@@ -546,19 +538,6 @@
     if (open && track) Analytics.page(`#faq/${f.id}`, `Q. ${f.q}`.replace(/⁠/g, ""));
   }
 
-  // PC 2단 오른쪽 질문 상세
-  function renderFaqDetail(id, root) {
-    const f = FAQS.find((x) => x.id === id);
-    if (!f) { root.innerHTML = splitEmpty("질문"); return; }
-    setChrome("faq", "자주 묻는 질문");
-    root.innerHTML = `<article class="detail">
-        <div class="detail-head">
-          <div class="head-row"><div class="tag-row"><span class="tag c-${f.cat}">${catName(f.cat)}</span></div>${copyBtn(`#faq/${f.id}`)}</div>
-          <h2><span class="faq-mark" aria-hidden="true">Q</span> ${esc(f.q)}</h2>
-        </div>
-        <div class="detail-body">${faqAnswer(f)}</div>
-      </article>`;
-  }
 
   /* ---------- 화면: 공지사항 ---------- */
   const filteredNotices = () => {
@@ -597,8 +576,7 @@
         bindEmptyChat(box, "notice-empty", q);
         return;
       }
-      // 검색하지 않을 때는 앞의 8개만 보여 주고 '더 보기'로 나머지를 펼친다 (주소로 연 공지가 뒤쪽이면 처음부터 펼침)
-      if (list.findIndex((n) => location.hash === `#notice/${n.id}`) >= NOTICE_PREVIEW) state.noticeAll = true;
+      // 검색하지 않을 때는 앞의 8개만 보여 주고 '더 보기'로 나머지를 펼친다
       const cut = !q && !state.noticeAll && list.length > NOTICE_PREVIEW + 2;
       const shown = cut ? list.slice(0, NOTICE_PREVIEW) : list;
       box.innerHTML = `<ul class="card-list" id="noticeList">${shown.map((n) => noticeCard(n, { summary: true, q })).join("")}</ul>
@@ -609,7 +587,6 @@
         $("#noticeList").children[NOTICE_PREVIEW]?.querySelector("a")?.focus({ preventScroll: true });
         Analytics.event("notice-more");
       });
-      markSelected();
     };
     const input = $("#noticeSearch"), clear = $("#noticeClear");
     input.addEventListener("input", () => { state.noticeQuery = input.value; clear.hidden = !input.value; draw(); });
@@ -628,7 +605,7 @@
     let all = filteredNotices();
     if (!all.some((n) => n.id === id)) all = sortedNotices();
     const i = all.findIndex((n) => n.id === id);
-    if (i < 0) return root === main ? renderNotice() : (root.innerHTML = splitEmpty("공지"));
+    if (i < 0) return renderNotice();
     const n = all[i];
     setChrome("notice", "공지사항");
     const prev = all[i - 1], next = all[i + 1];
@@ -681,20 +658,6 @@
   });
   syncTextBtn();
 
-  /* ---------- PC 2단 (넓은 화면에서 왼쪽 목록 + 오른쪽 상세) ---------- */
-  const WIDE = window.matchMedia("(min-width: 1024px)");
-  let splitKind = null;
-  const splitEmpty = (what) => `<div class="split-empty"><span class="ico">${ICON.chevR}</span>
-    <b>왼쪽에서 ${what}을 고르면 여기에 내용이 나옵니다</b></div>`;
-  // 목록에서 지금 열린 항목 표시
-  function markSelected() {
-    const h = location.hash;
-    document.querySelectorAll("#listPane .q-row, #listPane .card").forEach((a) => {
-      if (a.getAttribute("href") === h) a.setAttribute("aria-current", "true");
-      else a.removeAttribute("aria-current");
-    });
-  }
-
   /* ---------- 라우터 ---------- */
   // 화면을 그린 뒤 통계에 조회 기록 (#faq/24 → /faq/24)
   function route() {
@@ -707,41 +670,18 @@
   }
   function renderRoute() {
     const [page, id] = location.hash.replace(/^#/, "").split("/");
-    const listPage = page === "faq" || page === "notice";
-    if (WIDE.matches && listPage) {
-      // 같은 탭 안에서 항목만 바뀌면 목록은 그대로 두고 오른쪽만 다시 그린다 (목록 스크롤·검색어 유지)
-      if (splitKind !== page || !$("#listPane")) {
-        main.dataset.view = "split";
-        main.innerHTML = `<div class="split"><div class="split-list" id="listPane"></div><div class="split-detail" id="detailPane"></div></div>`;
-        splitKind = page;
-        if (page === "faq") renderFaq($("#listPane")); else renderNotice($("#listPane"));
-        window.scrollTo(0, 0);
-      }
-      const pane = $("#detailPane");
-      if (id) { if (page === "faq") renderFaqDetail(+id, pane); else renderNoticeDetail(+id, pane); }
-      else { setChrome(page, page === "faq" ? "자주 묻는 질문" : "공지사항"); pane.innerHTML = splitEmpty(page === "faq" ? "질문" : "공지"); }
-      // 오른쪽에 연 항목(비슷한 질문·이전/다음 등)이 왼쪽 목록의 접힌 부분에 있으면 펼쳐서 보이게
-      if (id) {
-        const a = $(`#listPane [href="#${page}/${id}"]`);
-        if (page === "faq" && a && a.closest("li").hidden) toggleGroup(a.closest("ul").querySelector(".more-row"), { focus: false });
-        if (page === "notice" && !a && !state.noticeAll) { state.noticeAll = true; renderNotice($("#listPane")); }
-      }
-      pane.scrollTop = 0;
-      markSelected();
-      return;
-    }
-    splitKind = null;
-    main.dataset.view = "single";
+    // 질문·공지 목록은 넓은 화면에서 2단으로 넓게(list), 공지 본문은 읽기 좋은 폭으로(single).
+    // 질문은 PC에서도 휴대폰처럼 누른 자리에서 답이 펼쳐진다 (오른쪽 상세 칸 없음)
+    main.dataset.view = page === "notice" && id ? "single" : page === "faq" || page === "notice" ? "list" : "home";
     if (page === "faq") renderFaq(main, id ? +id : null);
     else if (page === "notice" && id) renderNoticeDetail(+id);
     else if (page === "notice") renderNotice();
-    else { renderHome(); main.dataset.view = "home"; }
+    else renderHome();
     window.scrollTo(0, 0);
     // 주소로 연 질문은 맨 위로 올린 뒤 그 질문 위치로 스크롤
     if (pendingScroll) { pendingScroll.scrollIntoView({ block: "start" }); pendingScroll = null; }
   }
   window.addEventListener("hashchange", route);
-  WIDE.addEventListener("change", () => { splitKind = null; renderRoute(); });
 
   // 탭: 클릭 + 좌우 화살표 키
   const tabs = [...document.querySelectorAll(".tab")];
