@@ -596,6 +596,7 @@
           ${fest ? evInfo(s.event) : ""}
           ${tocHtml}
           <div class="detail-body">${paras(s.body, true)}</div>
+          ${(s.images || []).length ? `<div class="post-figures">${s.images.map((im) => `<figure class="post-figure"><a href="${esc(im.src)}" target="_blank" rel="noopener"><img src="${esc(im.src)}" alt="${esc(im.alt || "")}" loading="lazy" decoding="async"${im.w ? ` width="${im.w}" height="${im.h}"` : ""}></a>${im.caption ? `<figcaption>${esc(im.caption)}</figcaption>` : ""}</figure>`).join("")}</div>` : ""}
           ${s.files.length ? `<div class="attach"><h2>첨부파일 ${s.files.length}</h2><ul>${s.files.map((f) => `<li><a href="${p.href}" onclick="return false">${ICON.file}${esc(f)}</a></li>`).join("")}</ul></div>` : ""}
           ${p.qas.length ? `<section class="qa" aria-labelledby="sec-qa">
             <div class="qa-head">
