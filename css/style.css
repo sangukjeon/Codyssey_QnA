@@ -692,14 +692,11 @@ a.ev-row:active { background: var(--pressed); }
 .foot-note { display: block; font-size: 0.875rem; color: var(--text-3); }
 .foot-about li + li { margin-top: 4px; }
 .foot-about b { font-weight: 600; color: var(--text-strong); }
-.foot-credit { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; margin-top: 20px !important; padding-top: 12px; border-top: 1px solid var(--divider-weak); }
-.foot-people { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; }
-/* 만든 사람: 주변 글씨처럼 회색 보통 굵기. 깃허브 표시와 밑줄로 누를 수 있다는 것만 알린다 */
-.foot-people a { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 0 6px; border-radius: var(--r-300); color: var(--text-secondary); text-decoration: underline; text-decoration-color: var(--gray-300); text-underline-offset: 3px; }
-.foot-people a:hover { color: var(--text-strong); text-decoration-color: currentColor; }
-.foot-people a:active { background: var(--pressed); }
-.foot-gh { flex: none; }
-@media (max-width: 479px) { .foot-people { margin-left: -6px; } } /* 이름이 세로로 쌓일 때 왼쪽 끝을 맞춘다 */
+.foot-credit { margin-top: 20px !important; padding-top: 12px; border-top: 1px solid var(--divider-weak); }
+/* "Made by 전상욱 · 이재엽": 누르면 팀 소개 창. 주변처럼 회색 글씨에 옅은 밑줄 */
+.foot-team { min-height: 32px; padding: 0 6px; margin-left: -6px; border: 0; border-radius: var(--r-300); background: none; font: inherit; color: var(--text-secondary); cursor: pointer; text-decoration: underline; text-decoration-color: var(--gray-300); text-underline-offset: 3px; }
+.foot-team:hover { color: var(--text-strong); text-decoration-color: currentColor; }
+.foot-team:active { background: var(--pressed); }
 .foot-bottom { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 24px; margin-top: 6px; font-size: 0.875rem; color: var(--text-3); font-variant-numeric: tabular-nums; }
 .foot-line { display: flex; flex-wrap: wrap; gap: 0 12px; }
 .foot-line span:empty { display: none; }
@@ -711,6 +708,37 @@ a.ev-row:active { background: var(--pressed); }
   .footer { padding-bottom: 24px; }
   .foot-bottom { padding-right: 22rem; justify-content: flex-start; gap: 4px 32px; }
 }
+
+/* ===== 팀 소개 창 (dialog) ===== */
+.team {
+  width: min(880px, calc(100vw - 32px)); max-width: none; max-height: calc(100dvh - 48px); margin: auto; padding: 48px 48px 44px;
+  border: 0; border-radius: var(--r-600); background: var(--gray-50); color: var(--text-primary); box-shadow: var(--shadow-sheet);
+  opacity: 0; transform: translateY(12px) scale(.98); transition: opacity .2s var(--ease), transform .2s var(--ease); overflow: auto;
+}
+.team.open { opacity: 1; transform: none; }
+.team::backdrop { background: var(--dimmed); }
+.team-close { position: absolute; top: 12px; right: 12px; }
+.team-title { margin: 0; font-size: 2.25rem; line-height: 1.2; font-weight: 800; letter-spacing: -0.02em; color: var(--text-strong); }
+.team-title em { font-style: normal; color: var(--primary); }
+.team-sub { margin: 12px 0 0; font-size: 1.0625rem; line-height: 1.5; font-weight: 600; color: var(--text-secondary); text-wrap: pretty; }
+.team-grid { list-style: none; margin: 28px 0 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.team-card { padding: 22px 22px 20px; border: 1px solid var(--divider-weak); border-radius: var(--r-600); background: var(--white); }
+.team-card h3 { margin: 0; font-size: 1rem; line-height: 1.4; font-weight: 700; color: var(--primary); }
+.team-card p { margin: 6px 0 0; font-size: 0.875rem; line-height: 1.55; color: var(--text-secondary); text-wrap: pretty; }
+.team-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.team-chip { display: inline-flex; align-items: center; min-height: 36px; padding: 0 16px; border: 1px solid var(--border); border-radius: 999px; background: var(--white); font-size: 0.9375rem; font-weight: 500; color: var(--text-strong); text-decoration: none; transition: border-color .1s var(--ease), background-color .1s var(--ease); }
+.team-chip:hover { border-color: var(--primary); color: var(--primary); }
+.team-chip:active { background: var(--pressed); }
+/* 휴대폰: 화면 아래에서 올라오는 시트, 카드는 세로로 */
+@media (max-width: 719px) {
+  .team { width: 100%; max-height: 88dvh; margin: auto 0 0; padding: 36px 20px 28px; border-radius: var(--r-600) var(--r-600) 0 0; transform: translateY(100%); transition: opacity .2s var(--ease), transform .24s var(--ease); }
+  .team.open { transform: none; }
+  .team-title { font-size: 1.75rem; }
+  .team-sub { font-size: 1rem; }
+  .team-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; margin-top: 22px; }
+  .team-card { padding: 18px 18px 16px; }
+}
+@media (prefers-reduced-motion: reduce) { .team { transition: none; } }
 
 /* ===== 넓은 화면 (PC) ===== */
 @media (min-width: 1024px) {

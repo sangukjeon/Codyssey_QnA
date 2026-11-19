@@ -865,14 +865,40 @@
     const touched = lastDay ? POSTS.filter((p) => p.date === lastDay) : [];
     const newNotices = touched.filter((p) => p.own === lastDay).length, grown = touched.filter((p) => p.fresh.length);
     const freshText = [newNotices ? `새 공지 ${newNotices}건` : "", grown.length ? `공지 ${grown.length}건에 새 질문 ${grown.reduce((s, p) => s + p.fresh.length, 0)}개` : ""].filter(Boolean).join(" · ");
-    // 만든 사람: 깃허브 표시 + 이름(깃허브 이름). 누르면 그 사람의 깃허브가 새 탭으로 열린다
-    const GH = `<svg class="foot-gh" width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>`;
-    const makers = typeof MAKERS === "undefined" ? [] : MAKERS;
-    $("#footMakers").innerHTML = makers.map((m) => `<a href="https://github.com/${encodeURIComponent(m.id)}" target="_blank" rel="noopener">${GH}${esc(m.name ? `${m.name} (${m.id})` : m.id)}<span class="sr-only"> 깃허브, 새 탭</span></a>`).join("");
     // 맨 밑줄: "11월 19일 (목) 업데이트 · 새 공지 3건" 처럼 한 문장으로
     const upd = `${fmtDate(UPDATED)} 업데이트`;
     $("#updated").textContent = !freshText ? upd : lastDay === UPDATED ? `${upd} · ${freshText}` : `${upd} · ${fmtDate(lastDay)} ${freshText}`;
     $("#footFresh").textContent = "";
+  })();
+  // 팀 소개 창: 발의 "Made by 전상욱 · 이재엽"을 누르면 역할별 카드와 이름(누르면 깃허브)이 나온다
+  (function setupTeam() {
+    const makers = typeof MAKERS === "undefined" ? [] : MAKERS, team = typeof TEAM === "undefined" ? null : TEAM;
+    const btn = $("#teamOpen"), dlg = $("#team");
+    if (!btn || !dlg || !makers.length) { if (btn) btn.closest("p").remove(); return; }
+    btn.textContent = `Made by ${makers.map((m) => m.name || m.id).join(" · ")}`;
+    const who = (id) => makers.find((m) => m.id === id) || { name: id, id };
+    const chip = (m) => `<a class="team-chip" href="https://github.com/${encodeURIComponent(m.id)}" target="_blank" rel="noopener" title="github.com/${esc(m.id)}">${esc(m.name || m.id)}<span class="sr-only"> 깃허브, 새 탭</span></a>`;
+    $("#teamTitle").innerHTML = `Team <em>${esc((team && team.title) || "Q&A 허브")}</em>`;
+    $("#teamSub").textContent = (team && team.sub) || "";
+    const roles = team && team.roles && team.roles.length ? team.roles : [{ role: "만든 사람", desc: "", who: makers.map((m) => m.id) }];
+    $("#teamGrid").innerHTML = roles.map((r) => `<li class="team-card">
+        <h3>${esc(r.role)}</h3>${r.desc ? `<p>${esc(r.desc)}</p>` : ""}
+        <div class="team-chips">${r.who.map((id) => chip(who(id))).join("")}</div>
+      </li>`).join("");
+    const close = () => { dlg.classList.remove("open"); setTimeout(() => dlg.open && dlg.close(), 200); };
+    btn.addEventListener("click", () => {
+      if (typeof dlg.showModal !== "function") return;
+      dlg.showModal(); requestAnimationFrame(() => dlg.classList.add("open"));
+      Analytics.event("team-open");
+    });
+    $("#teamClose").addEventListener("click", close);
+    dlg.addEventListener("cancel", (e) => { e.preventDefault(); close(); }); // ESC
+    dlg.addEventListener("click", (e) => { if (e.target === dlg) close(); }); // 바깥(어두운 곳) 누르면 닫기
+    dlg.addEventListener("close", () => { dlg.classList.remove("open"); btn.focus(); });
+    $("#teamGrid").addEventListener("click", (e) => {
+      const a = e.target.closest(".team-chip");
+      if (a) Analytics.event("team-github", { to: a.getAttribute("href").split("/").pop() });
+    });
   })();
   scrim.addEventListener("click", closeChat);
   document.addEventListener("keydown", (e) => {
