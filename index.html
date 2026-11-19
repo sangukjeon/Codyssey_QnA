@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>코디세이 Q&amp;A 허브</title>
-  <meta name="description" content="공지, 자주 묻는 질문, 시험 안내를 한곳에서 찾아보세요. 교육생이 디스코드 공지와 안내 자료를 정리한 비공식 페이지입니다.">
+  <meta name="description" content="공지와 그 공지에 대해 묻고 답한 것, 이벤트 일정을 한곳에서 찾아보세요. 교육생이 디스코드 공지와 안내 자료를 정리한 비공식 페이지입니다.">
   <link rel="icon" href="assets/logo.svg?v=1" type="image/svg+xml">
   <link rel="icon" href="assets/favicon-32.png?v=1" sizes="32x32" type="image/png">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=1">
@@ -22,7 +22,7 @@
   <meta property="og:image:alt" content="코디세이 Q&amp;A 허브 — 공지, 자주 묻는 질문, 시험 안내를 한곳에서">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
-  <link rel="stylesheet" href="css/style.css?v=20261119-5">
+  <link rel="stylesheet" href="css/style.css?v=20261119-9">
   <script>
     // 저장해 둔 '글자 크게'를 화면을 그리기 전에 적용 (깜빡임 방지)
     try { if (localStorage.getItem("qna-text-size") === "large") document.documentElement.classList.add("text-lg"); } catch (e) {}
@@ -34,36 +34,44 @@
   <header class="head">
     <div class="wrap">
       <div class="brand-row">
-        <a class="logo" href="#home" aria-label="Codyssey Q&amp;A 허브, 홈으로 이동">
+        <a class="logo" href="#home" aria-label="Codyssey Q&amp;A 허브, 첫 화면으로 이동">
           <img src="assets/codyssey-logo-h.png" alt="" width="102" height="22">
           <span class="brand-sep" aria-hidden="true"></span>
           <span class="brand-name">Q&amp;A 허브</span>
         </a>
-        <button class="text-size" type="button" id="textSize"><span class="ga" aria-hidden="true">가</span><span class="ts-label">글자 크게</span></button>
-      </div>
-      <h1 class="sr-only" id="pageTitle">홈</h1>
-      <div class="tabs" role="tablist" aria-label="메뉴">
-        <button class="tab" role="tab" id="tab-home" data-route="home" aria-controls="main">홈</button>
-        <button class="tab" role="tab" id="tab-faq" data-route="faq" aria-controls="main">자주 묻는 질문</button>
-        <button class="tab" role="tab" id="tab-notice" data-route="notice" aria-controls="main">공지사항</button>
-        <span class="tab-bar" aria-hidden="true"></span>
+        <nav class="tabs" aria-label="메뉴">
+          <a class="tab" href="#home" data-tab="board">공지사항</a>
+          <a class="tab" href="#event" data-tab="event">이벤트<span class="tab-badge" id="evBadge" hidden></span></a>
+        </nav>
+        <button class="head-search" type="button" id="headSearch" aria-label="검색창으로 이동">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m20 20-4.8-4.8"/></svg>
+          <span class="hs-label">검색</span>
+        </button>
+        <button class="text-size" type="button" id="textSize"><span class="ga" aria-hidden="true">가</span><span class="ts-label"><span class="ts-pre">글자 </span>크게</span></button>
       </div>
     </div>
   </header>
 
   <div class="wrap">
-
-    <main id="main" tabindex="-1" role="tabpanel"></main>
+    <main id="main" tabindex="-1"></main>
   </div>
 
+  <!-- 발: 코디세이 연락처 · 이 사이트 안내 · 맨 밑줄에 업데이트 날짜 -->
   <footer class="footer">
     <div class="wrap">
-      <div class="notice-box" role="note">
-        <p><b>코디세이 공식 사이트가 아닙니다.</b> <span id="updated"></span></p>
-        <p>교육생이 디스코드 공지와 오리엔테이션·시험 안내 자료를 개인적으로 정리한 비공식 페이지입니다. 내용이 다르면 원문 공지와 운영진 안내를 따라 주세요.</p>
-        <p>문제가 되는 내용이 있거나 운영진의 요청이 있으면 바로 수정하거나 사이트를 삭제합니다.</p>
-        <p>사이트 개선을 위해 쿠키 없이 개인을 식별하지 않는 익명 방문 통계(조회·클릭 수)를 수집합니다. 챗봇에 입력한 문장은 저장하지 않습니다.</p>
+      <div class="foot-cols">
+        <section class="foot-contact" aria-labelledby="footName">
+          <h2 id="footName">코디세이 연락처</h2>
+          <dl id="footContact"></dl>
+        </section>
+        <section class="foot-about" role="note" aria-label="이 사이트 안내">
+          <h2>코디세이 공식 사이트가 아닙니다.</h2>
+          <p>교육생이 디스코드 공지와 오리엔테이션·시험 안내 자료를 개인적으로 정리한 비공식 페이지입니다. 내용이 다르면 원문 공지와 운영진 안내를 따라 주세요.</p>
+          <p>문제가 되는 내용이 있거나 운영진의 요청이 있으면 바로 수정하거나 사이트를 삭제합니다.</p>
+          <p>사이트 개선을 위해 쿠키 없이 개인을 식별하지 않는 익명 방문 통계(조회·클릭 수)를 수집합니다. 챗봇에 입력한 문장은 저장하지 않습니다.</p>
+        </section>
       </div>
+      <p class="foot-line"><span id="footFresh"></span><span id="updated"></span></p>
     </div>
   </footer>
 
@@ -107,10 +115,10 @@
 
   <!-- 방문 통계: Umami (쿠키 없음, 개인 식별 안 함). 실제 사이트 주소에서만 수집 -->
   <script defer id="umami-script" src="https://cloud.umami.is/script.js" data-website-id="78b52595-de22-4f75-b92c-4f10ca1a968a" data-auto-track="false" data-domains="sangukjeon.github.io"></script>
-  <script src="js/analytics.js?v=20261119-5"></script>
-  <script src="js/data.js?v=20261119-5"></script>
-  <script src="js/matcher.js?v=20261119-5"></script>
-  <script src="js/app.js?v=20261119-5"></script>
+  <script src="js/analytics.js?v=20261119-9"></script>
+  <script src="js/data.js?v=20261119-9"></script>
+  <script src="js/matcher.js?v=20261119-9"></script>
+  <script src="js/app.js?v=20261119-9"></script>
   <script>
     // 설치(앱으로 추가) 지원용 서비스 워커 — 캐시는 하지 않는다
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
