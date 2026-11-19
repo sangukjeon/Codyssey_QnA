@@ -678,7 +678,7 @@ a.ev-row:active { background: var(--pressed); }
 .to-top.show { opacity: 1; visibility: visible; transform: none; }
 .to-top.show:active { transform: scale(.92); }
 /* 발: 화면 폭을 다 쓰는 흰 띠. [연락처 | 이 사이트] → 만든 사람 → 저작권 줄과 업데이트 날짜 */
-.footer { margin-top: 48px; padding: 40px 0 100px; /* 아래는 떠 있는 단추(맨 위로 · 챗봇)가 글을 가리지 않을 만큼 */ background: var(--white); border-top: 1px solid var(--divider-weak); font-size: 0.9375rem; line-height: 1.6; color: var(--text-secondary); }
+.footer { margin-top: 48px; padding: 40px 0 96px; /* 아래는 떠 있는 단추(맨 위로 · 챗봇)가 글을 가리지 않을 만큼 */ background: var(--white); border-top: 1px solid var(--divider-weak); font-size: 0.9375rem; line-height: 1.6; color: var(--text-secondary); }
 .footer p { margin: 0; text-wrap: pretty; }
 .footer ul { margin: 0; padding: 0; list-style: none; }
 .footer h2 { margin: 0 0 12px; font-size: 0.9375rem; line-height: 1.5; font-weight: 700; color: var(--text-strong); }
@@ -692,17 +692,25 @@ a.ev-row:active { background: var(--pressed); }
 .foot-note { display: block; font-size: 0.875rem; color: var(--text-3); }
 .foot-about li + li { margin-top: 6px; }
 .foot-about b { font-weight: 600; color: var(--text-strong); }
-.foot-credit { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; margin-top: 32px !important; padding-top: 20px; border-top: 1px solid var(--divider-weak); }
-.foot-credit b { font-weight: 700; color: var(--text-strong); }
-.foot-people { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
-.foot-people a { color: var(--text-strong); font-weight: 600; }
-.foot-dot { color: var(--text-3); }
+.foot-credit { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; margin-top: 32px !important; padding-top: 20px; border-top: 1px solid var(--divider-weak); }
+.foot-people { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; }
+/* 만든 사람: 주변 글씨처럼 회색 보통 굵기. 깃허브 표시와 밑줄로 누를 수 있다는 것만 알린다 */
+.foot-people a { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 6px; border-radius: var(--r-300); color: var(--text-secondary); text-decoration: underline; text-decoration-color: var(--gray-300); text-underline-offset: 3px; }
+.foot-people a:hover { color: var(--text-strong); text-decoration-color: currentColor; }
+.foot-people a:active { background: var(--pressed); }
+.foot-gh { flex: none; }
+@media (max-width: 479px) { .foot-people { margin-left: -6px; } } /* 이름이 세로로 쌓일 때 왼쪽 끝을 맞춘다 */
 .foot-bottom { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 24px; margin-top: 12px; font-size: 0.875rem; color: var(--text-3); font-variant-numeric: tabular-nums; }
 .foot-line { display: flex; flex-wrap: wrap; gap: 0 12px; }
 .foot-line span:empty { display: none; }
 .foot-line span + span::before { content: "·"; margin-right: 12px; }
 @media (min-width: 720px) { .foot-top { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 40px; } }
-@media (min-width: 1024px) { .foot-top { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 72px; } }
+@media (min-width: 1024px) {
+  .foot-top { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 72px; }
+  /* 넓은 화면: 맨 밑줄 오른쪽을 떠 있는 단추 자리로 비워 두고, 아래 여백을 줄인다 */
+  .footer { padding-bottom: 32px; }
+  .foot-bottom { padding-right: 22rem; justify-content: flex-start; gap: 4px 32px; }
+}
 
 /* ===== 넓은 화면 (PC) ===== */
 @media (min-width: 1024px) {
