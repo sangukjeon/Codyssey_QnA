@@ -188,6 +188,7 @@ main:focus { outline: none; }
 .c-rules    { --c-bg: #eef0ff; --c-ic: #5b5fd6; --c-tx: #34379a; }
 .c-apply    { --c-bg: #e0f6f7; --c-ic: #0f9aa8; --c-tx: #0b5e66; }
 .c-etc      { --c-bg: #f2f3f8; --c-ic: #697383; --c-tx: #4a5667; }
+.c-event    { --c-bg: #f4ebff; --c-ic: #9255d9; --c-tx: #5b2a96; }
 .tag[class*="c-"] { background: var(--c-bg); color: var(--c-tx); }
 
 /* 칩 (분류 탭 · 챗봇 추천 질문) */
@@ -517,7 +518,7 @@ main:focus { outline: none; }
 .rail-text { margin: 2px 0 6px; font-size: 0.9375rem; line-height: 1.57; color: var(--text-secondary); text-wrap: pretty; }
 
 /* ===== 이벤트: 정해진 날짜가 있는 일정 ===== */
-.ev-col { min-width: 0; display: grid; gap: 28px; }
+.ev-col { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; }
 .ev-col .sec-title { margin-bottom: 10px; }
 .sec-title .n { margin-left: 4px; font-size: 1rem; font-weight: 700; color: var(--primary); font-variant-numeric: tabular-nums; }
 .ev-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
@@ -539,6 +540,19 @@ a.ev-row:active { background: var(--pressed); }
 .ev-past .ev-row { background: var(--gray-50); }
 .ev-past .ev-title { font-weight: 600; color: var(--text-secondary); }
 .ev-past .ev-date b { color: var(--text-secondary); }
+/* 행사 칸: 종류 단추 · 꼬리표 · 지난 것 머리 */
+.ev-kinds { margin: 0 0 12px; }
+.ev-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
+.ev-tags .tag { min-height: 0; padding: 1px 8px; }
+.tag.tag-extra { color: var(--primary-strong); background: var(--blue-50); }
+.ev-subh { margin: 18px 0 8px; font-size: 1rem; line-height: 1.5; font-weight: 700; color: var(--text-secondary); }
+.ev-subh .n { margin-left: 4px; color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
+/* 행사 공지 머리의 한눈 보기 (행사 · 일시 · 장소 · 추가 시간) */
+.ev-info { display: grid; margin: 16px 16px 0; padding: 6px 16px; background: #f8f3ff; border-radius: var(--r-300); }
+.ev-info > div { display: grid; grid-template-columns: 8.5rem minmax(0, 1fr); gap: 12px; padding: 8px 0; border-bottom: 1px solid #ece1fb; }
+.ev-info > div:last-child { border-bottom: 0; }
+.ev-info dt { font-size: 0.9375rem; font-weight: 700; color: #5b2a96; }
+.ev-info dd { margin: 0; font-size: 1rem; line-height: 1.5; color: var(--text-strong); }
 .ev-none { margin: 0; padding: 20px; background: var(--white); border: 1px dashed var(--border); border-radius: var(--r-300); font-size: 1rem; color: var(--text-secondary); }
 
 /* 링크 복사 */
@@ -687,7 +701,7 @@ a.ev-row:active { background: var(--pressed); }
   .detail-head { padding: 28px 28px 20px; }
   .detail-head h1 { font-size: 1.75rem; }
   .detail-body { padding: 24px 28px; }
-  .toc { margin: 20px 28px 0; }
+  .toc, .ev-info { margin: 20px 28px 0; }
   .attach { margin: 0 28px 16px; }
   .pager-nav a { padding: 14px 28px; }
   .back-row { max-width: calc(100% - 19rem - 24px); }
@@ -706,7 +720,7 @@ a.ev-row:active { background: var(--pressed); }
 /* ===== 좁은 화면 (태블릿 · 휴대폰) ===== */
 @media (max-width: 1023px) {
   /* 분류 탭: 한 줄로 두고 옆으로 민다 (화면 끝에서 잘린 탭이 '더 있다'는 표시) */
-  .cat-bar { margin-left: calc(var(--gutter) * -1); margin-right: calc(var(--gutter) * -1); }
+  .cat-bar, .ev-kinds { margin-left: calc(var(--gutter) * -1); margin-right: calc(var(--gutter) * -1); }
   .cat-tabs { flex-wrap: nowrap; padding: 0 var(--gutter); overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; }
   .cat-tabs::-webkit-scrollbar { display: none; }
   .finder { flex-basis: 100%; } /* 검색창은 한 줄을 다 쓴다 */
@@ -756,6 +770,7 @@ a.ev-row:active { background: var(--pressed); }
   .list-head { align-items: flex-start; flex-direction: column; }
 }
 @media (max-width: 479px) {
+  .ev-info > div { grid-template-columns: minmax(0, 1fr); gap: 2px; }
   /* 이벤트 한 줄: D-day 를 일정 이름 위로 올려 글자 칸을 넓게 */
   .ev-row { grid-template-columns: 3.75rem minmax(0, 1fr) 22px; grid-template-areas: "date dday chev" "date main chev"; row-gap: 4px; column-gap: 12px; }
   .ev-date { grid-area: date; }
