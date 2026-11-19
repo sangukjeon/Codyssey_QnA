@@ -781,27 +781,28 @@
     Analytics.event("to-top", { page: location.hash.split("/")[0] || "#home" });
   });
 
-  // 발(화면 맨 아래): 코디세이 연락처(위치 · 전화 · 메일)와 맨 밑줄의 업데이트 날짜
+  // 발(화면 맨 아래): 코디세이 연락처(위치 · 전화 · 메일 · 공식 사이트)와 맨 밑줄의 업데이트 날짜
   (function renderFoot() {
     const c = typeof CONTACT === "undefined" ? null : CONTACT, box = $("#footContact");
     if (c && box) {
       const row = (label, html) => (html ? `<div><dt>${label}</dt><dd>${html}</dd></div>` : "");
-      const tel = (num, note) => (num ? `<a href="tel:${num.replace(/[^0-9+]/g, "")}">${esc(num)}</a>${note ? ` <span>(${esc(note)})</span>` : ""}` : "");
-      $("#footName").textContent = c.name || "코디세이 연락처";
+      const tel = (num, note) => (num ? `<a href="tel:${num.replace(/[^0-9+]/g, "")}">${esc(num)}</a>${note ? ` <span class="foot-note">${esc(note)}</span>` : ""}` : "");
       box.innerHTML = [
         row("위치", c.place ? esc(c.place) : ""),
-        row("전화", [tel(c.phone, c.phoneNote), tel(c.night, c.nightNote)].filter(Boolean).join("<br>")),
-        row("메일", c.email ? `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>${c.emailNote ? ` <span>(${esc(c.emailNote)})</span>` : ""}` : ""),
+        row("전화", tel(c.phone, c.phoneNote)),
+        row("주말·야간", tel(c.night, "")),
+        row("메일", c.email ? `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : ""),
         row("공식 사이트", c.site ? `<a href="${esc(c.site)}" target="_blank" rel="noopener">${esc(c.site.replace(/^https?:\/\//, ""))}</a>` : ""),
       ].join("");
     }
-    // 가장 최근에 업데이트된 날과 그날 바뀐 것 (새 공지 몇 건, 질문이 붙은 공지 몇 건)
+    // 맨 밑줄: 내용 업데이트 날짜와 그날 바뀐 것 (새 공지 몇 건, 질문이 붙은 공지 몇 건)
     const lastDay = POSTS.map((p) => p.date).sort().pop() || "";
     const touched = lastDay ? POSTS.filter((p) => p.date === lastDay) : [];
     const newNotices = touched.filter((p) => p.own === lastDay).length, grown = touched.filter((p) => p.fresh.length);
     const freshText = [newNotices ? `새 공지 ${newNotices}건` : "", grown.length ? `공지 ${grown.length}건에 새 질문 ${grown.reduce((s, p) => s + p.fresh.length, 0)}개` : ""].filter(Boolean).join(" · ");
-    $("#footFresh").textContent = lastDay ? `가장 최근 업데이트는 ${fmtDate(lastDay)}입니다. ${freshText}` : "";
     $("#updated").textContent = `내용 업데이트 ${fmtDate(UPDATED)}`;
+    $("#footFresh").textContent = freshText;
+    bindChat($(".footer"), "footer");
   })();
   scrim.addEventListener("click", closeChat);
   document.addEventListener("keydown", (e) => {
