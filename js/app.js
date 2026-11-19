@@ -626,7 +626,7 @@
         <aside class="detail-rail" aria-label="행사 안내">
           ${evFaqs.length ? railBox("행사 참여 · 신청에 대해 묻고 답한 것", evFaqs.map((f) => ({ href: `#faq/${f.id}`, key: `f${f.id}`, text: f.q, icon: ICON.chevR }))) : ""}
           <section class="rail-box"><h2>여기에 없는 행사</h2>
-            <p class="rail-text">미션데이, 특강, 간식데이 같은 행사 일정은 바뀔 수 있어 이 페이지에 적지 않습니다. 디스코드 공지사항 채널을 확인해 주세요.</p>
+            <p class="rail-text">미션데이, 특강, 간식데이 같은 행사는 날짜가 정해진 것만 여기에 올립니다. 그 밖의 일정은 디스코드 공지사항 채널을 확인해 주세요.</p>
           </section>
         </aside>
       </div>`;
