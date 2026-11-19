@@ -235,6 +235,7 @@
     GB: "AI 네이티브 과정 교육시설 이용 가이드북",
     "OT+GB": "오리엔테이션 자료 + AI 네이티브 과정 가이드북",
     EXAM: "시험 기능 학습자 가이드",
+    EVENTS: "디스코드 allinone-취창업-및-행사 채널",
   };
   const sourceName = (k) => SOURCES[k] || "디스코드 allinone-공지사항 채널";
 
@@ -582,7 +583,7 @@
     const pagerLink = (x, label) => `<li>${x
       ? `<a href="${x.href}"><span>${label}</span><span${rd(x.key)}>${esc(x.title)}${READ_NOTE}</span></a>`
       : `<a aria-disabled="true"><span>${label}</span><span>${label}이 없습니다</span></a>`}</li>`;
-    const dates = [p.own ? `${s.date ? "게시" : "등록"} ${fmtDate(p.own)}` : "", p.date > p.own ? `질문 추가 ${fmtDate(p.date)}` : "", `출처: ${esc(sourceName(s.source))}`].filter(Boolean).join(" · ");
+    const dates = [p.own ? `${s.date ? "게시" : "등록"} ${fmtDate(p.own)}` : "", p.date > p.own ? `${p.fresh.length ? "질문 추가" : "답 보강"} ${fmtDate(p.date)}` : "", `출처: ${esc(sourceName(s.source))}`].filter(Boolean).join(" · ");
     main.innerHTML = `${backLink(backLabel, backHref)}
       <div class="detail-wrap">
         <article class="detail">
