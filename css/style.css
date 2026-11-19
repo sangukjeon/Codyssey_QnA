@@ -21,6 +21,7 @@
   --red-500: #e5484d;
   --success: #2f8a4e;
   --visited: #6b3fa0;               /* 이미 본 글의 제목 (흰 바탕 7.4:1) */
+  --foot-text: #616c7c;             /* 발의 작은 안내 글씨 — 묻히되 읽히게 (회색 바탕 4.8:1) */
 
   /* 어르신도 읽기 쉽게: 보조 글자는 대비 7:1 가까이, 선·화살표도 눈에 띄게 */
   --primary: var(--blue-600);       /* 흰 바탕 6.3:1, 연파랑 바탕 5.6:1 */
@@ -580,8 +581,11 @@ a.ev-row:active { background: var(--pressed); }
   transition: transform .1s var(--ease), background-color .1s var(--ease);
 }
 .icon-btn:active { transform: scale(.92); background: var(--pressed); }
+/* 떠 있는 단추 한 줄: [맨 위로] [챗봇에게 질문] — 화면 오른쪽 아래 */
+.floaters { position: fixed; right: 16px; bottom: 16px; z-index: 40; display: flex; align-items: center; gap: 8px; pointer-events: none; }
+.floaters > * { pointer-events: auto; }
 .chat-fab {
-  position: fixed; right: 16px; bottom: 16px; z-index: 40; overflow: hidden;
+  position: relative; overflow: hidden; flex: none;
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   height: 56px; padding: 0 20px 0 16px; border-radius: var(--r-350);
   background: var(--primary); color: #fff; font-size: 1.0625rem; font-weight: 600;
@@ -664,7 +668,7 @@ a.ev-row:active { background: var(--pressed); }
 
 /* ===== '맨 위로' · 화면 아래 안내 ===== */
 .to-top {
-  position: fixed; right: 16px; bottom: 84px; z-index: 39; /* 챗봇 버튼(아래 16px + 56px) 위 */
+  flex: none; /* .floaters 안에서 챗봇 버튼 왼쪽에 놓인다 */
   display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 8px 16px 8px 12px; border-radius: var(--r-300);
   border: 1px solid var(--line-input); background: var(--white); color: var(--text-strong); box-shadow: var(--shadow-float);
   font-size: 1rem; line-height: 1.4; font-weight: 600; white-space: nowrap;
@@ -673,20 +677,24 @@ a.ev-row:active { background: var(--pressed); }
 }
 .to-top.show { opacity: 1; visibility: visible; transform: none; }
 .to-top.show:active { transform: scale(.92); }
-/* 맨 끝에서 '맨 위로'와 챗봇 버튼이 안내 글을 가리지 않게 아래를 넉넉히 */
-/* 발: 화면 폭을 다 쓰는 흰 띠. 왼쪽에 코디세이 연락처, 오른쪽에 이 사이트 안내, 맨 밑줄에 업데이트 날짜 */
-.footer { margin-top: 40px; padding: 28px 0 140px; background: var(--white); border-top: 1px solid var(--border); font-size: 0.9375rem; line-height: 1.6; color: var(--text-secondary); }
-.footer p { margin: 0; text-wrap: pretty; }
-.footer h2 { margin: 0 0 8px; font-size: 1rem; line-height: 1.5; font-weight: 700; color: var(--text-strong); }
-.footer a { color: var(--text-strong); font-weight: 600; text-underline-offset: 3px; }
-.foot-cols { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
-.foot-contact dl { margin: 0; display: grid; gap: 6px; }
-.foot-contact dl > div { display: grid; grid-template-columns: 5.5em minmax(0, 1fr); column-gap: 8px; }
-.foot-contact dt { font-weight: 600; color: var(--text-strong); }
-.foot-contact dd { margin: 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.foot-about p + p { margin-top: 4px; }
-.foot-line { display: flex; flex-wrap: wrap; gap: 2px 20px; margin-top: 24px !important; padding-top: 16px; border-top: 1px solid var(--divider-weak); font-size: 0.875rem; font-variant-numeric: tabular-nums; }
-@media (min-width: 900px) { .foot-cols { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 48px; } }
+/* 발: 눈에 띄는 판이 아니라 바탕에 묻히는 작은 회색 안내문.
+   코디세이 연락처 한 줄 → 이 사이트 안내 한 문단 → 만든 사람 · 업데이트 날짜.
+   아래 여백은 떠 있는 단추(맨 위로 · 챗봇)가 글을 가리지 않을 만큼만 둔다 */
+.footer { margin-top: 28px; padding: 0 0 80px; font-size: 0.8125rem; line-height: 1.55; color: var(--foot-text); }
+.footer .wrap > :first-child { padding-top: 14px; border-top: 1px solid var(--border); }
+.footer p, .footer ul { margin: 0; text-wrap: pretty; }
+.footer p + p, .footer ul + p { margin-top: 6px; }
+.footer b { font-weight: 600; color: var(--text-secondary); }
+.footer a { color: inherit; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; white-space: nowrap; } /* 전화번호 · 메일이 중간에 끊기지 않게 */
+.foot-contact { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 0 14px; font-variant-numeric: tabular-nums; }
+.foot-contact li { min-width: 0; overflow-wrap: anywhere; }
+.foot-line { display: flex; flex-wrap: wrap; gap: 0 14px; font-variant-numeric: tabular-nums; }
+.foot-line > span:empty { display: none; }
+/* 넓은 화면: 오른쪽을 떠 있는 단추 자리로 비워 두고, 아래 여백 없이 끝낸다 */
+@media (min-width: 1024px) {
+  .footer { padding-bottom: 20px; }
+  .footer .wrap > * { padding-right: 20rem; }
+}
 
 /* ===== 넓은 화면 (PC) ===== */
 @media (min-width: 1024px) {

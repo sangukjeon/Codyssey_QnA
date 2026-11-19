@@ -846,18 +846,19 @@
     Analytics.event("to-top", { page: location.hash.split("/")[0] || "#home" });
   });
 
-  // 발(화면 맨 아래): 코디세이 연락처(위치 · 전화 · 메일)와 맨 밑줄의 업데이트 날짜
+  // 발(화면 맨 아래): 코디세이 연락처(위치 · 전화 · 메일)와 맨 밑줄의 만든 사람 · 업데이트 날짜
   (function renderFoot() {
     const c = typeof CONTACT === "undefined" ? null : CONTACT, box = $("#footContact");
     if (c && box) {
-      const row = (label, html) => (html ? `<div><dt>${label}</dt><dd>${html}</dd></div>` : "");
-      const tel = (num, note) => (num ? `<a href="tel:${num.replace(/[^0-9+]/g, "")}">${esc(num)}</a>${note ? ` <span>(${esc(note)})</span>` : ""}` : "");
-      $("#footName").textContent = c.name || "코디세이 연락처";
+      // 이름 다음에 위치 · 전화 · 메일 · 사이트를 한 줄로 이어 쓴다 (좁으면 항목 단위로 줄이 바뀐다)
+      const item = (label, html) => (html ? `<li><b>${label}</b> ${html}</li>` : "");
+      const tel = (num, note) => (num ? `<a href="tel:${num.replace(/[^0-9+]/g, "")}">${esc(num)}</a>${note ? ` (${esc(note)})` : ""}` : "");
       box.innerHTML = [
-        row("위치", c.place ? esc(c.place) : ""),
-        row("전화", [tel(c.phone, c.phoneNote), tel(c.night, c.nightNote)].filter(Boolean).join("<br>")),
-        row("메일", c.email ? `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>${c.emailNote ? ` <span>(${esc(c.emailNote)})</span>` : ""}` : ""),
-        row("공식 사이트", c.site ? `<a href="${esc(c.site)}" target="_blank" rel="noopener">${esc(c.site.replace(/^https?:\/\//, ""))}</a>` : ""),
+        c.name ? `<li class="foot-name"><b>${esc(c.name)}</b></li>` : "",
+        item("위치", c.place ? esc(c.place) : ""),
+        item("전화", [tel(c.phone, c.phoneNote), tel(c.night, c.nightNote)].filter(Boolean).join(" · ")),
+        item("메일", c.email ? `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>${c.emailNote ? ` (${esc(c.emailNote)})` : ""}` : ""),
+        item("공식 사이트", c.site ? `<a href="${esc(c.site)}" target="_blank" rel="noopener">${esc(c.site.replace(/^https?:\/\//, ""))}</a>` : ""),
       ].join("");
     }
     // 가장 최근에 업데이트된 날과 그날 바뀐 것 (새 공지 몇 건, 질문이 붙은 공지 몇 건)
@@ -865,6 +866,10 @@
     const touched = lastDay ? POSTS.filter((p) => p.date === lastDay) : [];
     const newNotices = touched.filter((p) => p.own === lastDay).length, grown = touched.filter((p) => p.fresh.length);
     const freshText = [newNotices ? `새 공지 ${newNotices}건` : "", grown.length ? `공지 ${grown.length}건에 새 질문 ${grown.reduce((s, p) => s + p.fresh.length, 0)}개` : ""].filter(Boolean).join(" · ");
+    const makers = typeof MAKERS === "undefined" ? [] : MAKERS;
+    $("#footMakers").innerHTML = makers.length
+      ? `만든 사람 ${makers.map((id) => `<a href="https://github.com/${encodeURIComponent(id)}" target="_blank" rel="noopener">${esc(id)}</a>`).join(" · ")}`
+      : "";
     $("#footFresh").textContent = lastDay ? `가장 최근 업데이트는 ${fmtDate(lastDay)}입니다. ${freshText}` : "";
     $("#updated").textContent = `내용 업데이트 ${fmtDate(UPDATED)}`;
   })();
