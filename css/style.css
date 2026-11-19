@@ -246,11 +246,15 @@ main:focus { outline: none; }
 /* 카드 셋: 분류 색 바탕 위에 [분류 종류 | 올린 날] → 제목 → 내용 첫머리 */
 .news-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; }
 .news-grid > li { display: flex; min-width: 0; }
-/* 목록 줄과 같은 흰 판. 번지는 빛·색 테두리 없이 차분하게 두고, 분류 색은 글자(분류 이름)에만 쓴다 */
+/* 목록 줄과 같은 흰 판. 분류 색은 테두리로만 쓴다 (그림자·번지는 빛 없이) */
 .news-card {
+  --c-line: var(--c-ic);
   flex: 1; min-width: 0; display: flex; flex-direction: column; padding: 20px 20px 22px;
-  position: relative; border-radius: var(--r-400); background: var(--white); border: 1px solid var(--divider-weak);
+  position: relative; border-radius: var(--r-400); background: var(--white); border: 1px solid var(--c-line);
   color: inherit; text-decoration: none; transition: transform .1s var(--ease);
+}
+@supports (color: color-mix(in srgb, red, blue)) {
+  .news-card { --c-line: color-mix(in srgb, var(--c-ic) 55%, white); }
 }
 .news-card:active { transform: scale(.98); }
 .news-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; font-size: 0.9375rem; line-height: 1.5; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
