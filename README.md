@@ -118,7 +118,7 @@ const CONTACT = {                // 화면 맨 아래(발)의 코디세이 연�
   place: "대전 서구 월평동 교육장 (출입은 3층, 교육장은 4·5층)",   // 도로명 주소는 확인되면 덧붙이기
   phone: "042-867-6205", phoneNote: "평일 9:00~18:00, 점심시간 제외",
   night: "042-867-1055", nightNote: "주말·야간",
-  email: "qna@codyssey.kr", emailNote: "교육 관련 문의",
+  email: "codyssey042@gmail.com", emailNote: "교육 관련 문의",
   site: "https://codyssey.kr/daejeon",
 };
 
