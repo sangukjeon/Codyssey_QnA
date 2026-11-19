@@ -869,7 +869,6 @@
     $("#footMakers").innerHTML = makers.map((m) => `<a href="https://github.com/${encodeURIComponent(m.id)}" target="_blank" rel="noopener">${esc(m.name ? `${m.name} (${m.id})` : m.id)}</a>`).join(`<span class="foot-dot" aria-hidden="true">·</span>`);
     $("#updated").textContent = `내용 업데이트 ${fmtDate(UPDATED)}`;
     $("#footFresh").textContent = freshText;
-    bindChat($(".footer"), "footer");
   })();
   scrim.addEventListener("click", closeChat);
   document.addEventListener("keydown", (e) => {

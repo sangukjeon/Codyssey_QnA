@@ -677,7 +677,7 @@ a.ev-row:active { background: var(--pressed); }
 }
 .to-top.show { opacity: 1; visibility: visible; transform: none; }
 .to-top.show:active { transform: scale(.92); }
-/* 발: 화면 폭을 다 쓰는 흰 띠. [바로가기 | 연락처 | 이 사이트] → 만든 사람 → 저작권 줄과 업데이트 날짜 */
+/* 발: 화면 폭을 다 쓰는 흰 띠. [연락처 | 이 사이트] → 만든 사람 → 저작권 줄과 업데이트 날짜 */
 .footer { margin-top: 48px; padding: 40px 0 100px; /* 아래는 떠 있는 단추(맨 위로 · 챗봇)가 글을 가리지 않을 만큼 */ background: var(--white); border-top: 1px solid var(--divider-weak); font-size: 0.9375rem; line-height: 1.6; color: var(--text-secondary); }
 .footer p { margin: 0; text-wrap: pretty; }
 .footer ul { margin: 0; padding: 0; list-style: none; }
@@ -685,9 +685,6 @@ a.ev-row:active { background: var(--pressed); }
 .footer a { color: var(--text-secondary); text-decoration: none; }
 .footer a:hover { color: var(--text-strong); text-decoration: underline; text-underline-offset: 3px; }
 .foot-top { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; }
-.foot-links { display: grid; gap: 8px; }
-.foot-chat { padding: 0; border: 0; background: none; font: inherit; color: var(--text-secondary); cursor: pointer; }
-.foot-chat:hover { color: var(--text-strong); text-decoration: underline; text-underline-offset: 3px; }
 .foot-contact dl { margin: 0; display: grid; gap: 6px; }
 .foot-contact dl > div { display: grid; grid-template-columns: 5.5em minmax(0, 1fr); column-gap: 8px; }
 .foot-contact dt { color: var(--text-3); }
@@ -704,8 +701,8 @@ a.ev-row:active { background: var(--pressed); }
 .foot-line { display: flex; flex-wrap: wrap; gap: 0 12px; }
 .foot-line span:empty { display: none; }
 .foot-line span + span::before { content: "·"; margin-right: 12px; }
-@media (min-width: 720px) { .foot-top { grid-template-columns: minmax(0, .6fr) minmax(0, 1.3fr) minmax(0, 1.2fr); gap: 32px; } }
-@media (min-width: 1024px) { .foot-top { grid-template-columns: minmax(0, .6fr) minmax(0, 1.2fr) minmax(0, 1.4fr); gap: 56px; } }
+@media (min-width: 720px) { .foot-top { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 40px; } }
+@media (min-width: 1024px) { .foot-top { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 72px; } }
 
 /* ===== 넓은 화면 (PC) ===== */
 @media (min-width: 1024px) {
