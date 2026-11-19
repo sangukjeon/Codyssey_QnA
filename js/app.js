@@ -109,9 +109,19 @@
   const homeless = FAQS.filter((f) => !postOf(homeOf(f)));
   if (homeless.length) console.warn("들어갈 공지가 없는 질문:", homeless.map((f) => f.id).join(", "));
 
+  // 행사 공지(data.js 에서 event 가 붙은 공지)는 공지사항 목록에서 빼고 '이벤트' 화면의 '행사'에 모은다.
+  // 새소식 카드와 검색에는 그대로 나온다
+  const KINDS = typeof EVENT_KINDS === "undefined" ? [] : EVENT_KINDS;
+  const isEventPost = (p) => !!p.src.event;
+  const kindName = (id) => (KINDS.find((k) => k.id === id) || {}).name || "행사";
+  // 글 앞에 붙는 꼬리표: 행사 공지는 행사 종류(간식데이 …), 나머지는 분류
+  const tagName = (p) => (isEventPost(p) ? kindName(p.src.event.kind) : catName(p.cat));
+  const BOARD = POSTS.filter((p) => !isEventPost(p));
+  const EVENT_POSTS = POSTS.filter(isEventPost);
+
   const byDate = (a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0);
   // 목록 순서: 중요 공지가 맨 위, 그다음 최근에 업데이트된 순 (같은 날은 data.js 에 적힌 순서 그대로)
-  const ORDERED = [...POSTS].sort((a, b) => (b.pin - a.pin) || byDate(a, b));
+  const ORDERED = [...BOARD].sort((a, b) => (b.pin - a.pin) || byDate(a, b));
   // 새소식 카드에 올릴 공지: 최근에 업데이트된 순. 같은 날 여러 건이면 분류를 돌아가며 하나씩 고른다
   function latestPosts(n) {
     const sorted = [...POSTS].filter((p) => p.date).sort(byDate), out = [];
@@ -126,13 +136,20 @@
   }
 
   // 분류 탭: 전체 + 공지가 하나라도 있는 분류
-  const TABS = CATEGORIES.filter((c) => c.id === "all" || POSTS.some((p) => p.cat === c.id));
+  const TABS = CATEGORIES.filter((c) => c.id === "all" || BOARD.some((p) => p.cat === c.id));
   const inCat = (p, cat) => cat === "all" || p.cat === cat;
 
-  /* ---------- 이벤트 (정해진 날짜가 있는 일정) ---------- */
-  const EVENTS = SCHEDULE.map((s) => ({ ...s, d: daysFrom(s.date) })).sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
-  const upcomingEvents = () => EVENTS.filter((e) => e.d >= 0);
+  /* ---------- 이벤트: 행사(행사 공지) · 일정(시험 · 마감) ---------- */
+  const byDay = (a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0); // 날짜가 이른 순
   const eventHref = (s) => (s.faq ? `#faq/${s.faq}` : s.notice ? `#notice/${s.notice}` : "");
+  // 행사 한 줄에 쓸 값: 이름(없으면 공지 제목) · 시간과 장소 · 종류 · 운영진 추가 시간
+  const FESTS = EVENT_POSTS.map((p) => {
+    const e = p.src.event;
+    return { date: e.date, title: e.name || p.title, sub: [e.time, e.place].filter(Boolean).join(" · "), href: p.href, kind: e.kind, extra: e.extra, key: p.key, d: daysFrom(e.date) };
+  }).sort(byDay);
+  const SCHED = SCHEDULE.map((s) => ({ ...s, href: eventHref(s), d: daysFrom(s.date) })).sort(byDay);
+  // 가장 가까운 것부터: 행사와 일정을 함께 (같은 날이면 행사가 먼저)
+  const upcomingEvents = () => [...FESTS, ...SCHED].filter((e) => e.d >= 0).sort(byDay);
 
   /* ---------- 검색 ---------- */
   const queryWords = (q) => q.trim().split(/\s+/).map(N).filter(Boolean);
@@ -195,7 +212,7 @@
   function compute() {
     const words = queryWords(state.q);
     const base = words.length
-      ? ORDERED.map((p) => matchPost(p, words, state.scope)).filter(Boolean).sort((a, b) => b.rank - a.rank)
+      ? [...ORDERED, ...EVENT_POSTS].map((p) => matchPost(p, words, state.scope)).filter(Boolean).sort((a, b) => b.rank - a.rank)
       : ORDERED.map((p) => ({ p, rank: 0, inBody: false, qs: [] }));
     return { words, base, list: base.filter((m) => inCat(m.p, state.cat)), catCount: (id) => base.filter((m) => inCat(m.p, id)).length };
   }
@@ -289,7 +306,7 @@
   /* ---------- 화면: 공지사항 (새소식 카드 · 분류 탭 · 검색 · 공지 목록) ---------- */
   // 새소식 카드: 분류 색 바탕 위에 [분류 | 업데이트한 날] → 공지 제목 → 새로 붙은 질문(없으면 본문 첫머리)
   const newsCard = (p) => `<li><a class="news-card c-${p.cat}" href="${p.href}" data-news="${p.key}">
-      <span class="news-meta"><b>${catName(p.cat)}</b>${p.date ? `<time datetime="${p.date}">${fmtDate(p.date)}</time>` : ""}${isNew(p.date) ? TAG_NEW : ""}</span>
+      <span class="news-meta"><b>${esc(tagName(p))}</b>${p.date ? `<time datetime="${p.date}">${fmtDate(p.date)}</time>` : ""}${isNew(p.date) ? TAG_NEW : ""}</span>
       <h2 class="news-title"><span${rd(p.key)}>${esc(p.title)}${READ_NOTE}</span></h2>
       ${p.fresh.length
         ? `<span class="news-fresh">새 질문 ${p.fresh.length}개가 붙었습니다</span><span class="news-qs">${p.fresh.slice(0, 2).map((x) => `<span><span class="faq-mark" aria-hidden="true">Q</span> ${esc(x.f.q)}</span>`).join("")}</span>`
@@ -310,7 +327,7 @@
         <div class="board-head">
           <div>
             <h2 class="sec-title" id="h-board">공지사항</h2>
-            <p class="sec-desc">묻고 답한 것도 그 공지 안에 함께 정리했습니다. 공지 ${POSTS.length}건 · 질문 ${FAQS.length}개</p>
+            <p class="sec-desc">묻고 답한 것도 그 공지 안에 함께 정리했습니다. 공지 ${BOARD.length}건 · 질문 ${FAQS.length}개${EVENT_POSTS.length ? ` · 행사 공지 ${EVENT_POSTS.length}건은 <a href="#event">이벤트</a>에 있습니다` : ""}</p>
           </div>
           <form class="finder" id="finder" role="search" autocomplete="off">
             <span class="finder-scope">
@@ -406,7 +423,7 @@
   // 검색할 때는 제목 아래에 내용 미리 보기와, 그 공지 안에서 검색어에 맞은 질문(3개까지)을 같이 보여 준다
   function postRow(m, re, searching) {
     const p = m.p, reT = state.scope === "body" ? null : re, reB = state.scope === "title" ? null : re;
-    const cells = `<span class="post-cat"><span class="tag c-${p.cat}">${catName(p.cat)}</span></span>
+    const cells = `<span class="post-cat"><span class="tag c-${p.cat}">${esc(tagName(p))}</span></span>
       <span class="post-main">
         <span class="post-title">${p.pin ? TAG_PIN : ""}<span${rd(p.key)}>${hl(p.title, reT)}${READ_NOTE}</span>${p.src.files.length ? ICON.clip : ""}${isNew(p.date) ? TAG_NEW : ""}</span>
         ${searching && (m.inBody || !m.qs.length) ? `<span class="post-snip">${snippet(p.plain, m.inBody ? reB : null)}</span>` : ""}
@@ -508,7 +525,16 @@
   document.fonts && document.fonts.ready.then(syncStick);
 
   /* ---------- 화면: 공지 하나 (본문 + 묻고 답한 것) ---------- */
-  const backLink = (label) => `<a class="back-link" href="#home">${ICON.chevL}${esc(label)}</a>`;
+  const backLink = (label, href = "#home") => `<a class="back-link" href="${href}">${ICON.chevL}${esc(label)}</a>`;
+  const evFaqList = () => (typeof EVENT_FAQS === "undefined" ? [] : EVENT_FAQS).map((id) => FAQS.find((f) => f.id === id)).filter(Boolean);
+  const evFaqBox = () => { const qs = evFaqList(); return qs.length ? railBox("행사 참여 · 신청에 대해 묻고 답한 것", qs.map((f) => ({ href: `#faq/${f.id}`, key: `f${f.id}`, text: f.q, icon: ICON.chevR }))) : ""; };
+  // 행사 공지 머리의 한눈 보기: 종류 · 일시 · 장소 · 운영진 추가 시간
+  const evInfo = (e) => `<dl class="ev-info">
+      <div><dt>행사</dt><dd>${esc(kindName(e.kind))}</dd></div>
+      <div><dt>일시</dt><dd>${fmtDate(e.date)}${e.time ? ` ${esc(glueTight(e.time))}` : ""}</dd></div>
+      ${e.place ? `<div><dt>장소</dt><dd>${esc(e.place)}</dd></div>` : ""}
+      <div><dt>운영진 추가 시간</dt><dd>${e.extra ? esc(e.extra) : "공지에 적히지 않음"}</dd></div>
+    </dl>`;
   const railBox = (title, links, more = "") => `<section class="rail-box"><h2>${esc(title)}</h2>
     <ul class="link-list">${links.map((l) => `<li><a href="${l.href}">${l.icon}<span${rd(l.key)}>${esc(l.text)}${READ_NOTE}</span></a></li>`).join("")}</ul>${more}</section>`;
 
@@ -517,11 +543,13 @@
     const p = postOf(id);
     if (!p) return false;
     const s = p.src, opened = openFaq && p.qas.find((x) => x.id === openFaq);
-    state.seen = p.key; // '목록으로' 돌아가면 이 공지가 있는 쪽 · 줄을 연다
+    const fest = isEventPost(p); // 행사 공지는 '이벤트' 화면에 속한다
+    if (!fest) state.seen = p.key; // '목록으로' 돌아가면 이 공지가 있는 쪽 · 줄을 연다
     markRead(p.key);
-    setTab("board");
-    // 이전/다음은 지금 고른 분류·검색 기준, 거기에 없으면 전체 기준
-    let list = compute().list.map((m) => m.p);
+    setTab(fest ? "event" : "board");
+    const backHref = fest ? "#event" : "#home", backLabel = fest ? "이벤트로" : "목록으로";
+    // 이전/다음은 지금 고른 분류·검색 기준, 거기에 없으면 전체 기준 (행사 공지는 행사끼리, 행사 날 순)
+    let list = fest ? FESTS.map((x) => postOf(+x.href.split("/")[1])) : compute().list.map((m) => m.p);
     if (!list.includes(p)) list = ORDERED;
     const i = list.indexOf(p), prev = list[i - 1], next = list[i + 1];
     setTitle(opened ? `Q. ${opened.f.q}` : p.title);
@@ -530,7 +558,13 @@
     const boxes = [];
     const linked = FAQS.filter((f) => (f.related || []).includes(s.id) && homeOf(f) !== s.id);
     if (linked.length) boxes.push(railBox("다른 공지에 정리된 관련 질문", linked.map((f) => ({ href: `#faq/${f.id}`, key: `f${f.id}`, text: f.q, icon: ICON.chevR }))));
-    const same = ORDERED.filter((x) => x.cat === p.cat && x !== p).slice(0, 5);
+    if (fest) {
+      const others = FESTS.filter((x) => x.key !== p.key).reverse().slice(0, 5);
+      if (others.length) boxes.push(railBox("다른 행사", others.map((x) => ({ href: x.href, key: x.key, text: `${kindName(x.kind)} · ${x.title}`, icon: ICON.doc })),
+        `<a class="text-link" href="#event">행사 모두 보기</a>`));
+      const fq = evFaqBox(); if (fq) boxes.push(fq);
+    }
+    const same = fest ? [] : ORDERED.filter((x) => x.cat === p.cat && x !== p).slice(0, 5);
     if (same.length) boxes.push(railBox(`'${catName(p.cat)}' 분류의 다른 공지`, same.map((x) => ({ href: x.href, key: x.key, text: x.title, icon: ICON.doc })),
       `<button class="text-link" type="button" data-go-cat="${p.cat}">'${catName(p.cat)}' 분류 모두 보기</button>`));
 
@@ -540,15 +574,16 @@
       ? `<a href="${x.href}"><span>${label}</span><span${rd(x.key)}>${esc(x.title)}${READ_NOTE}</span></a>`
       : `<a aria-disabled="true"><span>${label}</span><span>${label}이 없습니다</span></a>`}</li>`;
     const dates = [p.own ? `${s.date ? "게시" : "등록"} ${fmtDate(p.own)}` : "", p.date > p.own ? `질문 추가 ${fmtDate(p.date)}` : "", `출처: ${esc(sourceName(s.source))}`].filter(Boolean).join(" · ");
-    main.innerHTML = `${backLink("목록으로")}
+    main.innerHTML = `${backLink(backLabel, backHref)}
       <div class="detail-wrap">
         <article class="detail">
           <div class="detail-head">
-            <div class="head-row"><div class="tag-row">${isNew(p.date) ? TAG_NEW : ""}${p.pin ? TAG_PIN : ""}<span class="tag c-${p.cat}">${catName(p.cat)}</span></div>${copyBtn(p.href)}</div>
+            <div class="head-row"><div class="tag-row">${isNew(p.date) ? TAG_NEW : ""}${p.pin ? TAG_PIN : ""}<span class="tag c-${p.cat}">${esc(tagName(p))}</span></div>${copyBtn(p.href)}</div>
             <h1>${esc(p.title)}</h1>
             <p class="source">${dates}</p>
             ${p.qas.length && !tocHtml ? `<p class="qa-jump"><button class="text-link" type="button" data-sec="qa">이 공지에 대해 묻고 답한 것 ${p.qas.length}개 보기</button></p>` : ""}
           </div>
+          ${fest ? evInfo(s.event) : ""}
           ${tocHtml}
           <div class="detail-body">${paras(s.body, true)}</div>
           ${s.files.length ? `<div class="attach"><h2>첨부파일 ${s.files.length}</h2><ul>${s.files.map((f) => `<li><a href="${p.href}" onclick="return false">${ICON.file}${esc(f)}</a></li>`).join("")}</ul></div>` : ""}
@@ -563,7 +598,7 @@
         </article>
         ${boxes.length ? `<aside class="detail-rail" aria-label="함께 볼 글">${boxes.join("")}</aside>` : ""}
       </div>
-      <div class="back-row"><a class="btn btn-tertiary btn-block" href="#home">목록으로</a></div>`;
+      <div class="back-row"><a class="btn btn-tertiary btn-block" href="${backHref}">${backLabel}</a></div>`;
     // 목차와 '묻고 답한 것 보기' 단추
     main.querySelectorAll("[data-sec]").forEach((b) => b.addEventListener("click", () => {
       const el = main.querySelector(`#sec-${b.dataset.sec}`);
@@ -590,21 +625,40 @@
     return opened ? $(`#q-${opened.id}`) : true;
   }
 
-  /* ---------- 화면: 이벤트 (정해진 날짜가 있는 일정) ---------- */
-  // 한 줄: 큰 날짜 + 일정 이름 + 한 줄 설명 + D-day
+  /* ---------- 화면: 이벤트 (행사 · 일정) ---------- */
+  // 한 줄: 큰 날짜 + [행사 종류 · 추가 시간] 이름 + 한 줄 설명 + D-day
   function eventRow(s, past = false) {
-    const d = parseDate(s.date), href = eventHref(s);
+    const d = parseDate(s.date), href = s.href;
+    const tags = `${s.kind ? `<span class="tag c-event">${esc(kindName(s.kind))}</span>` : ""}${s.extra ? `<span class="tag tag-extra">추가 시간 ${esc(s.extra)}</span>` : ""}`;
     const inner = `<span class="ev-date" aria-hidden="true"><b>${d.getDate()}</b><span>${d.getMonth() + 1}월 · ${DOW[d.getDay()]}</span></span>
-      <span class="ev-main"><span class="ev-title">${esc(glueTight(s.title))}</span><span class="sr-only">${fmtDate(s.date)}</span>${s.sub ? `<span class="ev-sub">${esc(glueTight(s.sub))}</span>` : ""}</span>
+      <span class="ev-main">${tags ? `<span class="ev-tags">${tags}</span>` : ""}<span class="ev-title">${s.key ? `<span${rd(s.key)}>${esc(glueTight(s.title))}${READ_NOTE}</span>` : esc(glueTight(s.title))}</span><span class="sr-only">${fmtDate(s.date)}</span>${s.sub ? `<span class="ev-sub">${esc(glueTight(s.sub))}</span>` : ""}</span>
       ${past ? '<span class="dday done">지남</span>' : `<span class="dday${s.d <= 2 ? " soon" : ""}">${ddayLabel(s.d)}</span>`}
       <span class="chev">${href ? ICON.chevR : ""}</span>`;
     return `<li>${href ? `<a class="ev-row" href="${href}">${inner}</a>` : `<div class="ev-row">${inner}</div>`}</li>`;
   }
+  const evList = (items, past = false) => `<ul class="ev-list">${items.map((s) => eventRow(s, past)).join("")}</ul>`;
+
+  let evKind = "all"; // 행사 칸에서 고른 종류
+  // 행사 칸: 종류 단추 + 다가오는 행사 + 지난 행사
+  function drawFests() {
+    const area = $("#festArea"); if (!area) return;
+    const pick = FESTS.filter((x) => evKind === "all" || x.kind === evKind);
+    const up = pick.filter((x) => x.d >= 0), past = pick.filter((x) => x.d < 0).reverse();
+    main.querySelectorAll(".ev-kind").forEach((b) => {
+      const k = b.dataset.kind, n = FESTS.filter((x) => k === "all" || x.kind === k).length;
+      b.setAttribute("aria-pressed", String(k === evKind));
+      b.querySelector(".n").textContent = n;
+      b.classList.toggle("zero", !n);
+    });
+    const name = evKind === "all" ? "행사" : kindName(evKind);
+    area.innerHTML = `${up.length ? evList(up) : `<p class="ev-none">다가오는 ${esc(name)} 공지가 아직 없습니다. 올라오면 여기에 모읍니다.</p>`}
+      ${past.length ? `<h3 class="ev-subh">지난 ${esc(name)} <span class="n">${past.length}개</span></h3><div class="ev-past">${evList(past, true)}</div>` : ""}`;
+  }
 
   function renderEvents() {
     setTitle("이벤트"); setTab("event");
-    const up = upcomingEvents(), past = EVENTS.filter((e) => e.d < 0).reverse(), next = up[0];
-    const evFaqs = (typeof EVENT_FAQS === "undefined" ? [] : EVENT_FAQS).map((id) => FAQS.find((f) => f.id === id)).filter(Boolean);
+    const up = upcomingEvents(), next = up[0];
+    const schedUp = SCHED.filter((e) => e.d >= 0), schedPast = SCHED.filter((e) => e.d < 0).reverse();
     main.innerHTML = `
       <div class="title-row">
         <div>
@@ -614,22 +668,33 @@
       </div>
       <div class="detail-wrap">
         <div class="ev-col">
-          <section aria-labelledby="h-up">
-            <h2 class="sec-title" id="h-up">다가오는 일정 <span class="n">${up.length}개</span></h2>
-            ${up.length ? `<ul class="ev-list">${up.map((s) => eventRow(s)).join("")}</ul>` : '<p class="ev-none">정해진 일정이 생기면 여기에 올립니다.</p>'}
+          <section aria-labelledby="h-fest">
+            <h2 class="sec-title" id="h-fest">행사 <span class="n">${FESTS.filter((x) => x.d >= 0).length}개 예정</span></h2>
+            <div class="cat-tabs ev-kinds" role="group" aria-label="행사 종류">${[{ id: "all", name: "전체" }, ...KINDS].map((k) =>
+              `<button class="chip ev-kind" type="button" data-kind="${k.id}" aria-pressed="false">${esc(k.name)}<span class="n"></span></button>`).join("")}</div>
+            <div id="festArea"></div>
           </section>
-          ${past.length ? `<section class="ev-past" aria-labelledby="h-past">
-            <h2 class="sec-title" id="h-past">지난 일정 <span class="n">${past.length}개</span></h2>
-            <ul class="ev-list">${past.map((s) => eventRow(s, true)).join("")}</ul>
-          </section>` : ""}
+          <section aria-labelledby="h-up">
+            <h2 class="sec-title" id="h-up">일정 · 시험 · 마감 <span class="n">${schedUp.length}개 예정</span></h2>
+            ${schedUp.length ? evList(schedUp) : '<p class="ev-none">정해진 일정이 생기면 여기에 올립니다.</p>'}
+            ${schedPast.length ? `<h3 class="ev-subh">지난 일정 <span class="n">${schedPast.length}개</span></h3><div class="ev-past">${evList(schedPast, true)}</div>` : ""}
+          </section>
         </div>
         <aside class="detail-rail" aria-label="행사 안내">
-          ${evFaqs.length ? railBox("행사 참여 · 신청에 대해 묻고 답한 것", evFaqs.map((f) => ({ href: `#faq/${f.id}`, key: `f${f.id}`, text: f.q, icon: ICON.chevR }))) : ""}
-          <section class="rail-box"><h2>여기에 없는 행사</h2>
-            <p class="rail-text">미션데이, 특강, 간식데이 같은 행사는 날짜가 정해진 것만 여기에 올립니다. 그 밖의 일정은 디스코드 공지사항 채널을 확인해 주세요.</p>
+          ${evFaqBox()}
+          <section class="rail-box"><h2>행사와 운영진 추가 시간</h2>
+            <p class="rail-text">미션데이 · 간식데이 · 네트워킹 데이 · 취업 멘토링 · 창업 멘토링 · 세미나 공지가 올라오면 여기에 모읍니다.</p>
+            <p class="rail-text">참여하면 운영진 추가 시간이 인정되고, 몇 시간인지는 행사 공지마다 안내됩니다. 아직 여기에 없는 행사는 디스코드 공지사항 채널을 확인해 주세요.</p>
           </section>
         </aside>
       </div>`;
+    main.querySelector(".ev-kinds").addEventListener("click", (e) => {
+      const b = e.target.closest(".ev-kind"); if (!b) return;
+      evKind = b.dataset.kind;
+      drawFests();
+      Analytics.event("event-kind", { kind: evKind });
+    });
+    drawFests();
   }
 
   /* ---------- 글자 크기 (보통 ↔ 크게 125%) ---------- */
@@ -800,6 +865,8 @@
     const touched = lastDay ? POSTS.filter((p) => p.date === lastDay) : [];
     const newNotices = touched.filter((p) => p.own === lastDay).length, grown = touched.filter((p) => p.fresh.length);
     const freshText = [newNotices ? `새 공지 ${newNotices}건` : "", grown.length ? `공지 ${grown.length}건에 새 질문 ${grown.reduce((s, p) => s + p.fresh.length, 0)}개` : ""].filter(Boolean).join(" · ");
+    const makers = typeof MAKERS === "undefined" ? [] : MAKERS;
+    $("#footMakers").innerHTML = makers.map((m) => `<a href="https://github.com/${encodeURIComponent(m.id)}" target="_blank" rel="noopener">${esc(m.name ? `${m.name} (${m.id})` : m.id)}</a>`).join(`<span class="foot-dot" aria-hidden="true">·</span>`);
     $("#updated").textContent = `내용 업데이트 ${fmtDate(UPDATED)}`;
     $("#footFresh").textContent = freshText;
     bindChat($(".footer"), "footer");

@@ -21,6 +21,7 @@
   --red-500: #e5484d;
   --success: #2f8a4e;
   --visited: #6b3fa0;               /* 이미 본 글의 제목 (흰 바탕 7.4:1) */
+  --foot-text: #616c7c;             /* 발의 작은 안내 글씨 — 묻히되 읽히게 (회색 바탕 4.8:1) */
 
   /* 어르신도 읽기 쉽게: 보조 글자는 대비 7:1 가까이, 선·화살표도 눈에 띄게 */
   --primary: var(--blue-600);       /* 흰 바탕 6.3:1, 연파랑 바탕 5.6:1 */
@@ -188,6 +189,7 @@ main:focus { outline: none; }
 .c-rules    { --c-bg: #eef0ff; --c-ic: #5b5fd6; --c-tx: #34379a; }
 .c-apply    { --c-bg: #e0f6f7; --c-ic: #0f9aa8; --c-tx: #0b5e66; }
 .c-etc      { --c-bg: #f2f3f8; --c-ic: #697383; --c-tx: #4a5667; }
+.c-event    { --c-bg: #f4ebff; --c-ic: #9255d9; --c-tx: #5b2a96; }
 .tag[class*="c-"] { background: var(--c-bg); color: var(--c-tx); }
 
 /* 칩 (분류 탭 · 챗봇 추천 질문) */
@@ -517,7 +519,7 @@ main:focus { outline: none; }
 .rail-text { margin: 2px 0 6px; font-size: 0.9375rem; line-height: 1.57; color: var(--text-secondary); text-wrap: pretty; }
 
 /* ===== 이벤트: 정해진 날짜가 있는 일정 ===== */
-.ev-col { min-width: 0; display: grid; gap: 28px; }
+.ev-col { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; }
 .ev-col .sec-title { margin-bottom: 10px; }
 .sec-title .n { margin-left: 4px; font-size: 1rem; font-weight: 700; color: var(--primary); font-variant-numeric: tabular-nums; }
 .ev-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
@@ -539,6 +541,19 @@ a.ev-row:active { background: var(--pressed); }
 .ev-past .ev-row { background: var(--gray-50); }
 .ev-past .ev-title { font-weight: 600; color: var(--text-secondary); }
 .ev-past .ev-date b { color: var(--text-secondary); }
+/* 행사 칸: 종류 단추 · 꼬리표 · 지난 것 머리 */
+.ev-kinds { margin: 0 0 12px; }
+.ev-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
+.ev-tags .tag { min-height: 0; padding: 1px 8px; }
+.tag.tag-extra { color: var(--primary-strong); background: var(--blue-50); }
+.ev-subh { margin: 18px 0 8px; font-size: 1rem; line-height: 1.5; font-weight: 700; color: var(--text-secondary); }
+.ev-subh .n { margin-left: 4px; color: var(--text-tertiary); font-variant-numeric: tabular-nums; }
+/* 행사 공지 머리의 한눈 보기 (행사 · 일시 · 장소 · 추가 시간) */
+.ev-info { display: grid; margin: 16px 16px 0; padding: 6px 16px; background: #f8f3ff; border-radius: var(--r-300); }
+.ev-info > div { display: grid; grid-template-columns: 8.5rem minmax(0, 1fr); gap: 12px; padding: 8px 0; border-bottom: 1px solid #ece1fb; }
+.ev-info > div:last-child { border-bottom: 0; }
+.ev-info dt { font-size: 0.9375rem; font-weight: 700; color: #5b2a96; }
+.ev-info dd { margin: 0; font-size: 1rem; line-height: 1.5; color: var(--text-strong); }
 .ev-none { margin: 0; padding: 20px; background: var(--white); border: 1px dashed var(--border); border-radius: var(--r-300); font-size: 1rem; color: var(--text-secondary); }
 
 /* 링크 복사 */
@@ -566,8 +581,11 @@ a.ev-row:active { background: var(--pressed); }
   transition: transform .1s var(--ease), background-color .1s var(--ease);
 }
 .icon-btn:active { transform: scale(.92); background: var(--pressed); }
+/* 떠 있는 단추 한 줄: [맨 위로] [챗봇에게 질문] — 화면 오른쪽 아래 */
+.floaters { position: fixed; right: 16px; bottom: 16px; z-index: 40; display: flex; align-items: center; gap: 8px; pointer-events: none; }
+.floaters > * { pointer-events: auto; }
 .chat-fab {
-  position: fixed; right: 16px; bottom: 16px; z-index: 40; overflow: hidden;
+  position: relative; overflow: hidden; flex: none;
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   height: 56px; padding: 0 20px 0 16px; border-radius: var(--r-350);
   background: var(--primary); color: #fff; font-size: 1.0625rem; font-weight: 600;
@@ -650,7 +668,7 @@ a.ev-row:active { background: var(--pressed); }
 
 /* ===== '맨 위로' · 화면 아래 안내 ===== */
 .to-top {
-  position: fixed; right: 16px; bottom: 84px; z-index: 39; /* 챗봇 버튼(아래 16px + 56px) 위 */
+  flex: none; /* .floaters 안에서 챗봇 버튼 왼쪽에 놓인다 */
   display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 8px 16px 8px 12px; border-radius: var(--r-300);
   border: 1px solid var(--line-input); background: var(--white); color: var(--text-strong); box-shadow: var(--shadow-float);
   font-size: 1rem; line-height: 1.4; font-weight: 600; white-space: nowrap;
@@ -659,18 +677,14 @@ a.ev-row:active { background: var(--pressed); }
 }
 .to-top.show { opacity: 1; visibility: visible; transform: none; }
 .to-top.show:active { transform: scale(.92); }
-/* 맨 끝에서 '맨 위로'와 챗봇 버튼이 안내 글을 가리지 않게 아래를 넉넉히 */
-/* 발: 화면 폭을 다 쓰는 흰 띠. [소개 | 바로가기 | 연락처 | 이 사이트] → 만든 사람 → 저작권 줄과 업데이트 날짜 */
-.footer { margin-top: 48px; padding: 40px 0 140px; background: var(--white); border-top: 1px solid var(--divider-weak); font-size: 0.9375rem; line-height: 1.6; color: var(--text-secondary); }
+/* 발: 화면 폭을 다 쓰는 흰 띠. [바로가기 | 연락처 | 이 사이트] → 만든 사람 → 저작권 줄과 업데이트 날짜 */
+.footer { margin-top: 48px; padding: 40px 0 100px; /* 아래는 떠 있는 단추(맨 위로 · 챗봇)가 글을 가리지 않을 만큼 */ background: var(--white); border-top: 1px solid var(--divider-weak); font-size: 0.9375rem; line-height: 1.6; color: var(--text-secondary); }
 .footer p { margin: 0; text-wrap: pretty; }
 .footer ul { margin: 0; padding: 0; list-style: none; }
 .footer h2 { margin: 0 0 12px; font-size: 0.9375rem; line-height: 1.5; font-weight: 700; color: var(--text-strong); }
 .footer a { color: var(--text-secondary); text-decoration: none; }
 .footer a:hover { color: var(--text-strong); text-decoration: underline; text-underline-offset: 3px; }
 .foot-top { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; }
-.foot-logo { display: inline-flex; align-items: center; gap: 8px; font-size: 1.0625rem; font-weight: 700; color: var(--text-strong) !important; }
-.foot-logo img { border-radius: 6px; }
-.foot-brand p { margin-top: 10px; max-width: 26em; }
 .foot-links { display: grid; gap: 8px; }
 .foot-chat { padding: 0; border: 0; background: none; font: inherit; color: var(--text-secondary); cursor: pointer; }
 .foot-chat:hover { color: var(--text-strong); text-decoration: underline; text-underline-offset: 3px; }
@@ -690,8 +704,8 @@ a.ev-row:active { background: var(--pressed); }
 .foot-line { display: flex; flex-wrap: wrap; gap: 0 12px; }
 .foot-line span:empty { display: none; }
 .foot-line span + span::before { content: "·"; margin-right: 12px; }
-@media (min-width: 720px) { .foot-top { grid-template-columns: minmax(0, .7fr) minmax(0, 1.3fr) minmax(0, 1.1fr); } .foot-brand { grid-column: 1 / -1; } }
-@media (min-width: 1024px) { .foot-top { grid-template-columns: minmax(0, 1.1fr) minmax(0, .55fr) minmax(0, 1.3fr) minmax(0, 1.2fr); gap: 40px; } .foot-brand { grid-column: auto; } }
+@media (min-width: 720px) { .foot-top { grid-template-columns: minmax(0, .6fr) minmax(0, 1.3fr) minmax(0, 1.2fr); gap: 32px; } }
+@media (min-width: 1024px) { .foot-top { grid-template-columns: minmax(0, .6fr) minmax(0, 1.2fr) minmax(0, 1.4fr); gap: 56px; } }
 
 /* ===== 넓은 화면 (PC) ===== */
 @media (min-width: 1024px) {
@@ -706,7 +720,7 @@ a.ev-row:active { background: var(--pressed); }
   .detail-head { padding: 28px 28px 20px; }
   .detail-head h1 { font-size: 1.75rem; }
   .detail-body { padding: 24px 28px; }
-  .toc { margin: 20px 28px 0; }
+  .toc, .ev-info { margin: 20px 28px 0; }
   .attach { margin: 0 28px 16px; }
   .pager-nav a { padding: 14px 28px; }
   .back-row { max-width: calc(100% - 19rem - 24px); }
@@ -725,7 +739,7 @@ a.ev-row:active { background: var(--pressed); }
 /* ===== 좁은 화면 (태블릿 · 휴대폰) ===== */
 @media (max-width: 1023px) {
   /* 분류 탭: 한 줄로 두고 옆으로 민다 (화면 끝에서 잘린 탭이 '더 있다'는 표시) */
-  .cat-bar { margin-left: calc(var(--gutter) * -1); margin-right: calc(var(--gutter) * -1); }
+  .cat-bar, .ev-kinds { margin-left: calc(var(--gutter) * -1); margin-right: calc(var(--gutter) * -1); }
   .cat-tabs { flex-wrap: nowrap; padding: 0 var(--gutter); overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; }
   .cat-tabs::-webkit-scrollbar { display: none; }
   .finder { flex-basis: 100%; } /* 검색창은 한 줄을 다 쓴다 */
@@ -775,6 +789,7 @@ a.ev-row:active { background: var(--pressed); }
   .list-head { align-items: flex-start; flex-direction: column; }
 }
 @media (max-width: 479px) {
+  .ev-info > div { grid-template-columns: minmax(0, 1fr); gap: 2px; }
   /* 이벤트 한 줄: D-day 를 일정 이름 위로 올려 글자 칸을 넓게 */
   .ev-row { grid-template-columns: 3.75rem minmax(0, 1fr) 22px; grid-template-areas: "date dday chev" "date main chev"; row-gap: 4px; column-gap: 12px; }
   .ev-date { grid-area: date; }
