@@ -92,15 +92,17 @@
   const POSTS = NOTICES.map((n) => {
     const qas = FAQS.filter((f) => homeOf(f) === n.id).map((f) => {
       const nQ = N(f.q), nA = N(f.a);
-      return { f, id: f.id, key: `f${f.id}`, date: f.added || "", plain: plainOf(f.a), nQ, nA, nAll: [nQ, nA, ...(f.keywords || []).map(N)].join("|") };
+      return { f, id: f.id, key: `f${f.id}`, date: f.added || "", upd: f.updated || "", plain: plainOf(f.a), nQ, nA, nAll: [nQ, nA, ...(f.keywords || []).map(N)].join("|") };
     });
     const own = n.date || n.added || "";
-    // 최근 업데이트 = 공지를 올린 날과 질문이 붙은 날 가운데 가장 늦은 날
-    const date = [own, ...qas.map((x) => x.date)].sort().pop() || "";
+    // 최근 업데이트 = 공지를 올린 날, 질문이 붙은 날, 질문의 답을 고친 날(updated) 가운데 가장 늦은 날
+    const date = [own, ...qas.map((x) => x.date), ...qas.map((x) => x.upd)].sort().pop() || "";
     const nTitle = N(n.title), nBody = N(n.body);
     return {
       src: n, id: n.id, key: `n${n.id}`, cat: n.cat, href: `#notice/${n.id}`, title: n.title, body: n.body, plain: plainOf(n.body),
-      own, date, qas, fresh: date > own ? qas.filter((x) => x.date === date) : [], pin: !!n.pinned, nTitle, nBody,
+      own, date, qas, fresh: date > own ? qas.filter((x) => x.date === date) : [],
+      renewed: date > own ? qas.filter((x) => x.upd === date && x.date !== date) : [], // 그날 답이 바뀐 질문
+      pin: !!n.pinned, nTitle, nBody,
     };
   });
   const postOf = (id) => POSTS.find((p) => p.id === id);
@@ -119,8 +121,10 @@
   const BOARD = POSTS.filter((p) => !isEventPost(p));
   const EVENT_POSTS = POSTS.filter(isEventPost);
 
-  const byDate = (a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0);
-  // 목록 순서: 중요 공지가 맨 위, 그다음 최근에 업데이트된 순 (같은 날은 data.js 에 적힌 순서 그대로)
+  // 같은 날이면 그날 올린 새 공지가 먼저, 그다음 새 질문이 많이 붙은 공지, 답이 바뀐 질문이 많은 공지 (그래도 같으면 data.js 에 적힌 순서)
+  const sameDay = (a, b) => ((b.own === b.date) - (a.own === a.date)) || (b.fresh.length - a.fresh.length) || (b.renewed.length - a.renewed.length);
+  const byDate = (a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0) || sameDay(a, b);
+  // 목록 순서: 중요 공지가 맨 위, 그다음 최근에 업데이트된 순 (같은 날은 위 sameDay 순서)
   const ORDERED = [...BOARD].sort((a, b) => (b.pin - a.pin) || byDate(a, b));
   // 새소식 카드에 올릴 공지: 최근에 업데이트된 순. 같은 날 여러 건이면 분류를 돌아가며 하나씩 고른다
   function latestPosts(n) {
@@ -235,6 +239,7 @@
   const sourceName = (k) => SOURCES[k] || "디스코드 allinone-공지사항 채널";
 
   const TAG_NEW = '<span class="tag tag-new">NEW</span>';
+  const TAG_UPD = '<span class="tag tag-new">업데이트</span>'; // 답을 고친 뒤 7일 (data.js 의 updated)
   const TAG_PIN = '<span class="tag tag-pin">중요</span>';
 
   /* ---------- 링크 복사 ---------- */
@@ -279,7 +284,7 @@
   const relatedNotices = (f) => (f.related || []).map((nid) => NOTICES.find((n) => n.id === nid)).filter(Boolean);
   const qaItem = (f) => `<li class="qa-item" id="q-${f.id}"><h3 class="post-h"><button class="qa-row q-row" type="button" id="qb-${f.id}" aria-expanded="false" aria-controls="qa-${f.id}" data-id="${f.id}">
       <span class="faq-mark" aria-hidden="true">Q</span>
-      <span class="qa-q"><span${rd(`f${f.id}`)}>${esc(f.q)}${READ_NOTE}</span>${isNew(f.added) ? TAG_NEW : ""}</span>
+      <span class="qa-q"><span${rd(`f${f.id}`)}>${esc(f.q)}${READ_NOTE}</span>${isNew(f.added) ? TAG_NEW : isNew(f.updated) ? TAG_UPD : ""}</span>
       <span class="chev">${ICON.chevD}</span>
     </button></h3><div class="q-panel" id="qa-${f.id}" role="region" aria-labelledby="qb-${f.id}" hidden></div></li>`;
   // 펼친 답: 답, 출처, (이 공지 말고) 함께 볼 공지, 링크 복사
@@ -304,12 +309,16 @@
   }
 
   /* ---------- 화면: 공지사항 (새소식 카드 · 분류 탭 · 검색 · 공지 목록) ---------- */
-  // 새소식 카드: 분류 색 바탕 위에 [분류 | 업데이트한 날] → 공지 제목 → 새로 붙은 질문(없으면 본문 첫머리)
+  // 새소식 카드 한 줄: "새 질문 2개가 붙었습니다" / "답이 바뀐 질문 1개가 있습니다" / "새 질문 2개 · 답이 바뀐 질문 1개"
+  const freshLine = (p) => (p.fresh.length && p.renewed.length
+    ? `새 질문 ${p.fresh.length}개 · 답이 바뀐 질문 ${p.renewed.length}개`
+    : p.fresh.length ? `새 질문 ${p.fresh.length}개가 붙었습니다` : `답이 바뀐 질문 ${p.renewed.length}개가 있습니다`);
+  // 새소식 카드: 분류 색 바탕 위에 [분류 | 업데이트한 날] → 공지 제목 → 새로 붙은 질문 · 답이 바뀐 질문(없으면 본문 첫머리)
   const newsCard = (p) => `<li><a class="news-card c-${p.cat}" href="${p.href}" data-news="${p.key}">
       <span class="news-meta"><b>${esc(tagName(p))}</b>${p.date ? `<time datetime="${p.date}">${fmtDate(p.date)}</time>` : ""}${isNew(p.date) ? TAG_NEW : ""}</span>
       <h2 class="news-title"><span${rd(p.key)}>${esc(p.title)}${READ_NOTE}</span></h2>
-      ${p.fresh.length
-        ? `<span class="news-fresh">새 질문 ${p.fresh.length}개가 붙었습니다</span><span class="news-qs">${p.fresh.slice(0, 2).map((x) => `<span><span class="faq-mark" aria-hidden="true">Q</span> ${esc(x.f.q)}</span>`).join("")}</span>`
+      ${p.fresh.length || p.renewed.length
+        ? `<span class="news-fresh">${freshLine(p)}</span><span class="news-qs">${[...p.fresh, ...p.renewed].slice(0, 2).map((x) => `<span><span class="faq-mark" aria-hidden="true">Q</span> ${esc(x.f.q)}</span>`).join("")}</span>`
         : `<span class="news-excerpt">${esc(clip(p.plain, 68))}</span>`}
     </a></li>`;
 
