@@ -479,6 +479,12 @@ main:focus { outline: none; }
 .attach a svg { flex-shrink: 0; margin-top: 3px; color: var(--text-tertiary); }
 .attach.info a { color: var(--primary); }
 .attach.info a svg { color: var(--primary); }
+/* 공지에 붙인 이미지 (예: 팀 명단). 누르면 원래 크기로 새 탭에서 열린다 */
+.post-figures { margin: 0 16px 16px; display: grid; gap: 16px; }
+.post-figure { margin: 0; }
+.post-figure a { display: block; }
+.post-figure img { display: block; width: 100%; height: auto; border: 1px solid var(--divider-weak); border-radius: var(--r-300); background: var(--white); }
+.post-figure figcaption { margin-top: 6px; font-size: 0.9375rem; line-height: 1.54; color: var(--text-secondary); }
 
 /* 이 공지에 대해 묻고 답한 것: 질문 줄을 누르면 그 자리에서 답이 펼쳐진다 */
 .qa-jump { margin: 10px 0 0; font-size: 0.9375rem; }
@@ -755,6 +761,7 @@ a.ev-row:active { background: var(--pressed); }
   .detail-body { padding: 24px 28px; }
   .toc, .ev-info { margin: 20px 28px 0; }
   .attach { margin: 0 28px 16px; }
+  .post-figures { margin: 0 28px 20px; gap: 24px; }
   .pager-nav a { padding: 14px 28px; }
   .back-row { max-width: calc(100% - 19rem - 24px); }
 
