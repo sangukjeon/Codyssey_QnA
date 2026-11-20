@@ -160,7 +160,7 @@
     notices: NOTICES, faqs: FAQS, schedule: SCHEDULE,
     ops: typeof OPS_SCHEDULE === "undefined" ? [] : OPS_SCHEDULE, opsSource: typeof OPS_SOURCE === "undefined" ? null : OPS_SOURCE,
   }).map((x) => ({ ...x, d: daysFrom(x.date) }));
-  // 가장 가까운 것부터 (오늘 포함) — 메뉴의 '이벤트' 옆 D-day 와 이벤트 화면 첫 줄에 쓴다
+  // 가장 가까운 것부터 (오늘 포함) — 메뉴의 '이벤트' 옆 D-day 에 쓴다
   const upcomingEvents = () => CALENDAR.filter((e) => e.d >= 0);
 
   /* ---------- 검색 ---------- */
@@ -644,16 +644,18 @@
     return opened ? $(`#q-${opened.id}`) : true;
   }
 
-  /* ---------- 화면: 이벤트 (달력 + 그날 일정 + 목록) ---------- */
+  /* ---------- 화면: 이벤트 (왼쪽에 큰 달력, 오른쪽에 고른 날의 내용 — 휴대폰은 달력 아래) ---------- */
   const todayStr = () => { const t = today0(); return Calendar.ymd(t.getFullYear(), t.getMonth() + 1, t.getDate()); };
-  // ym: 보이는 달 · sel: 고른 날 · kind: 종류 · owner: 담당자 닉네임 · q: 찾는 말 (공지를 보고 돌아와도 그대로 남는다)
-  const ev = { ym: "", sel: "", kind: "all", owner: "", q: "" };
+  // ym: 보이는 달 · sel: 고른 날 · owner: 담당자 닉네임 · q: 찾는 말 (공지를 보고 돌아와도 그대로 남는다)
+  const ev = { ym: "", sel: "", owner: "", q: "" };
   let calFocus = ""; // 달력에서 키보드가 서 있는 날 (탭으로 들어오면 이 칸에 선다)
-  const evPick = () => Calendar.filter(CALENDAR, ev, calKindName);
-  const evFiltered = () => ev.kind !== "all" || !!ev.owner || !!ev.q.trim();
+  const evPick = () => Calendar.filter(CALENDAR, { owner: ev.owner, q: ev.q }, calKindName);
+  const evFiltered = () => !!ev.owner || !!ev.q.trim();
   // 달 넘기기는 일정이 있는 달과 이번 달 사이에서만
   const calRange = () => { const ms = [...Calendar.months(CALENDAR), Calendar.monthOf(todayStr())].sort(); return [ms[0], ms[ms.length - 1]]; };
   const NONE = '<span class="day-wait">공지에 없음</span>'; // 모르는 칸은 지어내지 않고 비워 둔다
+  // 달력 칸 · 점의 색이 무엇인지 (달력 아래 작은 안내)
+  const CAL_LEGEND = [["c-event", "행사"], ["c-task", "시험"], ["c-facility", "마감"], ["c-etc", "운영"]];
 
   // 목록 한 줄: 큰 날짜 + [종류 · 추가 시간] 이름 + 시각 · 장소 · 담당자 + D-day. 누르면 출처 공지로 (없으면 그날로)
   function eventRow(s) {
@@ -670,18 +672,10 @@
   }
   const evList = (items) => `<ul class="ev-list">${items.map(eventRow).join("")}</ul>`;
 
-  // 종류 단추의 숫자와 담당자 줄 (숫자는 다른 조건을 그대로 둔 채 그 단추를 골랐을 때의 개수)
-  function drawTools() {
-    const base = Calendar.filter(CALENDAR, { owner: ev.owner, q: ev.q }, calKindName);
-    main.querySelectorAll(".ev-kind").forEach((b) => {
-      const k = b.dataset.kind, n = base.filter((x) => k === "all" || x.kind === k).length;
-      b.setAttribute("aria-pressed", String(k === ev.kind));
-      b.querySelector(".n").textContent = n;
-      b.classList.toggle("zero", !n);
-    });
+  // 담당자 줄: 닉네임을 고르면 "담당자: ○○ · n개" 칩이 뜨고, 고르기 전에는 닉네임 단추가 늘어선다 (닉네임이 하나도 없으면 줄을 숨긴다)
+  function drawOwners() {
     const box = $("#evOwners"), list = Calendar.owners(CALENDAR);
     box.hidden = !list.length && !ev.owner;
-    // 닉네임을 고르면 "담당자: ○○ · n개" 칩이 뜨고, 고르기 전에는 닉네임 단추가 늘어선다 (닉네임이 하나도 없으면 줄을 숨긴다)
     box.innerHTML = ev.owner
       ? `<span class="chip owner-on">담당자: ${esc(ev.owner)} · ${evPick().length}개</span><button class="text-link" type="button" data-owner="">담당자 모두 보기</button>`
       : `<span class="owners-label">담당자</span>${list.map((o) => `<button class="chip owner-chip" type="button" data-owner="${esc(o.name)}">${esc(o.name)}<span class="n">${o.n}</span></button>`).join("")}`;
@@ -692,7 +686,8 @@
     const box = $("#calGrid"); if (!box) return;
     const month = Calendar.inMonth(evPick(), ev.ym), today = todayStr(), thisMonth = Calendar.monthOf(today) === ev.ym, [first, last] = calRange();
     $("#calTitle").textContent = Calendar.monthTitle(ev.ym);
-    $("#calSum").innerHTML = `${thisMonth ? "이번 달" : `${+ev.ym.slice(5)}월`} 예정 추가 시간 <b>${Calendar.hoursText(Calendar.extraTotal(month))}</b>${evFiltered() ? ' <span class="cal-sum-note">(고른 조건만)</span>' : ""}`;
+    // 달력 위 한 줄: 그달의 예정 추가 시간 합계와 일정 수
+    $("#calSum").innerHTML = `<span>${thisMonth ? "이번 달" : `${+ev.ym.slice(5)}월`} 예정 추가 시간 <b>${Calendar.hoursText(Calendar.extraTotal(month))}</b></span> <span>일정 <b>${month.length}개</b></span>${evFiltered() ? ' <span class="cal-sum-note">고른 조건만</span>' : ""}`;
     $("#calPrev").disabled = ev.ym <= first;
     $("#calNext").disabled = ev.ym >= last;
     // 탭으로 들어왔을 때 설 칸: 키보드가 서 있던 날 → 고른 날 → 오늘 → 1일
@@ -712,7 +707,7 @@
       }).join("")}</tr>`).join("")}</tbody></table>`;
   }
 
-  // 그날 일정: 달력 아래에 열린다. 줄마다 시간 · 장소 · 추가 시간 · 담당자 · 출처 공지
+  // 고른 날의 내용: 달력 오른쪽 칸(휴대폰은 달력 아래)에 그날 일정을 줄마다 — 시간 · 장소 · 추가 시간 · 담당자 · 출처 공지
   const dayItem = (it) => `<li class="day-item">
       <div class="ev-tags"><span class="tag ${calKindClass(it.kind)}">${esc(calKindName(it.kind))}</span>${it.extra ? `<span class="tag tag-extra">추가 시간 ${Calendar.hoursText(it.extra)}</span>` : ""}</div>
       <p class="day-name">${esc(glueTight(it.title))}</p>
@@ -727,16 +722,17 @@
     </li>`;
   function drawDay() {
     const box = $("#dayPanel"); if (!box) return;
-    if (!ev.sel) { box.innerHTML = '<p class="day-hint">날짜를 누르면 그날 일정이 여기에 열립니다.</p>'; return; }
-    const items = Calendar.onDay(evPick(), ev.sel), sum = Calendar.extraTotal(items), any = Calendar.onDay(CALENDAR, ev.sel).length;
+    if (!ev.sel) { box.innerHTML = '<p class="day-hint">달력에서 날짜를 누르면 그날 일정이 여기에 나옵니다.</p>'; return; }
+    const items = Calendar.onDay(evPick(), ev.sel), sum = Calendar.extraTotal(items), any = Calendar.onDay(CALENDAR, ev.sel).length, d = parseDate(ev.sel);
     box.innerHTML = `<div class="day-head">
-        <h3 class="day-title" id="dayTitle" tabindex="-1">${fmtDate(ev.sel)}${ev.sel === todayStr() ? ' <span class="dday soon">오늘</span>' : ""}<span class="n">${items.length ? `일정 ${items.length}개` : "일정 없음"}${sum ? ` · 추가 ${Calendar.hoursText(sum)}` : ""}</span></h3>
-        ${copyBtn(`#event/${ev.sel}`)}
+        <h2 class="day-title" id="dayTitle" tabindex="-1">${d.getMonth() + 1}월 ${d.getDate()}일 ${DOW[d.getDay()]}요일${ev.sel === todayStr() ? ' <span class="dday soon">오늘</span>' : ""}</h2>
+        ${sum ? `<p class="day-total">추가 ${Calendar.hoursText(sum)}</p>` : ""}
       </div>
+      <div class="day-bar"><p class="day-count">${items.length ? `일정 ${items.length}개` : "일정 없음"}</p>${copyBtn(`#event/${ev.sel}`)}</div>
       ${items.length ? `<ul class="day-list">${items.map(dayItem).join("")}</ul>` : `<p class="day-hint">${any ? "고른 조건에 맞는 일정이 이 날에는 없습니다." : "이 날은 정해진 일정이 없습니다."}</p>`}`;
   }
 
-  // 목록: 다가오는 일정 → 지난 일정(접어 둔다. 지난 날은 달력에 이미 보이므로 — 종류 · 담당자 · 찾는 말로 걸렀을 때는 펼쳐 둔다)
+  // 목록: 다가오는 일정 → 지난 일정(접어 둔다. 지난 날은 달력에 이미 보이므로 — 담당자 · 찾는 말로 걸렀을 때는 펼쳐 둔다)
   function drawEvList() {
     const area = $("#evListArea"); if (!area) return;
     const pick = evPick(), up = pick.filter((x) => x.d >= 0), past = pick.filter((x) => x.d < 0).reverse();
@@ -744,16 +740,16 @@
     area.innerHTML = `${up.length ? evList(up) : `<p class="ev-none">${evFiltered() ? "고른 조건에 맞는 다가오는 일정이 없습니다." : "다가오는 일정이 아직 없습니다. 공지가 올라오면 여기에 모읍니다."}</p>`}
       ${past.length ? `<details class="ev-past"${evFiltered() ? " open" : ""}><summary class="ev-subh">지난 일정 <span class="n">${past.length}개</span></summary>${evList(past)}</details>` : ""}`;
   }
-  const drawEvents = () => { drawTools(); drawCal(); drawDay(); drawEvList(); };
+  const drawEvents = () => { drawOwners(); drawCal(); drawDay(); drawEvList(); };
 
-  // 날짜 고르기: 달력의 그 칸에 표시하고, 아래에 그날 일정을 열고, 주소를 #event/2026-11-20 으로 맞춘다 (링크 복사 · 새로고침)
+  // 날짜 고르기: 달력의 그 칸에 표시하고, 옆(휴대폰은 아래)에 그날 일정을 보이고, 주소를 #event/2026-11-20 으로 맞춘다 (링크 복사 · 새로고침)
   function selectDay(date, { reveal = false } = {}) {
     ev.sel = date; ev.ym = Calendar.monthOf(date); calFocus = date;
     history.replaceState(null, "", `${location.pathname}${location.search}#event/${date}`);
     drawCal(); drawDay();
     const b = main.querySelector(`.cal-day[data-date="${date}"]`);
     if (b) b.focus({ preventScroll: true });
-    // 그날 일정이 화면 밖이면 보이게 내린다 (휴대폰에서는 달력 아래 목록이 그날로 내려간다)
+    // 그날 일정이 화면 밖이면(휴대폰: 달력 아래) 보이게 내린다
     if (reveal) $("#dayPanel").scrollIntoView({ block: "nearest", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
     Analytics.event("event-day", { date });
   }
@@ -768,20 +764,17 @@
     if (b) b.focus();
   }
 
-  // date: 주소가 #event/2026-11-20 일 때 그 날 (그 날이 든 달을 열고 그날 일정을 펼친다)
+  // date: 주소가 #event/2026-11-20 일 때 그 날 (그 날이 든 달을 열고 그날 일정을 보인다)
   function renderEvents(date = "") {
     setTitle("이벤트"); setTab("event");
     const today = todayStr();
     if (Calendar.isDate(date)) { ev.sel = date; ev.ym = Calendar.monthOf(date); }
     else if (!ev.ym) { ev.ym = Calendar.monthOf(today); ev.sel = today; } // 처음 열면 오늘이 든 달, 오늘을 고른 채로
     calFocus = "";
-    const up = upcomingEvents(), next = up[0], together = next ? up.filter((x) => x.date === next.date).length - 1 : 0;
+    const faqs = evFaqList();
     main.innerHTML = `
       <div class="title-row ev-head">
-        <div>
-          <h1 class="page-title">이벤트</h1>
-          <p class="page-sub">${next ? `가장 가까운 일정은 <b>${ddayLabel(next.d)}</b>, ${fmtDate(next.date)} <b>${esc(glueTight(next.title))}</b>${together ? ` 외 ${together}개` : ""}입니다.` : "지금은 다가오는 일정이 없습니다."}</p>
-        </div>
+        <h1 class="page-title">이벤트</h1>
         <div class="ev-find" role="search">
           ${ICON.search}
           <label class="sr-only" for="evQ">일정 · 담당자 찾기</label>
@@ -789,56 +782,47 @@
           <button class="search-clear" type="button" id="evQClear" aria-label="찾는 말 지우기" ${ev.q ? "" : "hidden"}>${ICON.close}</button>
         </div>
       </div>
-      <div class="detail-wrap">
-        <div class="ev-col">
-          <section aria-labelledby="calTitle">
-            <div class="cat-tabs ev-kinds" role="group" aria-label="일정 종류">${[{ id: "all", name: "전체" }, ...CAL_KINDS].map((k) =>
-              `<button class="chip ev-kind" type="button" data-kind="${k.id}" aria-pressed="false">${esc(k.name)}<span class="n"></span></button>`).join("")}</div>
-            <div class="ev-owners" id="evOwners" hidden></div>
-            <div class="cal-card">
-              <div class="cal-head">
-                <div class="cal-nav">
-                  <button class="cal-step" type="button" id="calPrev" aria-label="이전 달">${ICON.chevL}</button>
-                  <h2 class="cal-title" id="calTitle" aria-live="polite"></h2>
-                  <button class="cal-step" type="button" id="calNext" aria-label="다음 달">${ICON.chevR}</button>
-                  <button class="btn btn-tertiary btn-s cal-today" type="button" id="calToday">오늘</button>
-                </div>
-                <p class="cal-sum" id="calSum"></p>
+      <div class="ev-owners" id="evOwners" hidden></div>
+      <div class="ev-grid">
+        <section class="cal-card" aria-labelledby="calTitle">
+          <div class="cal-head">
+            <div class="cal-nav">
+              <div class="cal-move">
+                <button class="cal-step" type="button" id="calPrev" aria-label="이전 달">${ICON.chevL}</button>
+                <h2 class="cal-title" id="calTitle" aria-live="polite"></h2>
+                <button class="cal-step" type="button" id="calNext" aria-label="다음 달">${ICON.chevR}</button>
               </div>
-              <div id="calGrid"></div>
-              <div class="day-panel" id="dayPanel"></div>
+              <button class="btn btn-tertiary btn-s cal-today" type="button" id="calToday">오늘</button>
             </div>
-          </section>
-          <section aria-labelledby="h-list">
-            <h2 class="sec-title" id="h-list">일정 목록 <span class="n" id="evListCount"></span></h2>
-            <div id="evListArea"></div>
-          </section>
-        </div>
-        <aside class="detail-rail" aria-label="행사 안내">
-          ${evFaqBox()}
-          <section class="rail-box"><h2>달력에 모은 것</h2>
-            <p class="rail-text">행사 공지, 11월 운영 일정표, 시험 · 마감 일정을 한 달력에 합쳤습니다. 같은 날 같은 일은 한 번만 나옵니다.</p>
-            <p class="rail-text">운영진 추가 시간은 공지로 확인된 일정에만 적었습니다. 적히지 않은 일정은 그 행사 공지를 확인해 주세요. 담당자 닉네임은 아직 모으는 중입니다.</p>
-          </section>
-        </aside>
+            <p class="cal-sum" id="calSum"></p>
+          </div>
+          <div id="calGrid"></div>
+          <p class="cal-legend"><span class="sr-only">색의 뜻: </span>${CAL_LEGEND.map(([c, name]) => `<span class="${c}"><i aria-hidden="true"></i>${name}</span>`).join("")}</p>
+        </section>
+        <section class="day-panel" id="dayPanel" aria-label="고른 날의 일정"></section>
+        <section class="ev-sec" aria-labelledby="h-list">
+          <h2 class="sec-title" id="h-list">일정 목록 <span class="n" id="evListCount"></span></h2>
+          <div id="evListArea"></div>
+        </section>
+        ${faqs.length ? `<details class="ev-faq ev-sec">
+          <summary>자주 묻는 질문 <span class="n">${faqs.length}개</span></summary>
+          <ul class="link-list">${faqs.map((f) => `<li><a href="#faq/${f.id}">${ICON.chevR}<span${rd(`f${f.id}`)}>${esc(f.q)}${READ_NOTE}</span></a></li>`).join("")}</ul>
+        </details>` : ""}
+        <p class="ev-note ev-sec">달력에는 행사 공지, 11월 운영 일정표, 시험 · 마감 일정을 합쳐 놓았습니다(같은 날 같은 일은 한 번만). 운영진 추가 시간은 공지로 확인된 일정에만 적었고, 담당자 닉네임은 아직 모으는 중입니다.</p>
       </div>`;
 
-    main.querySelector(".ev-kinds").addEventListener("click", (e) => {
-      const b = e.target.closest(".ev-kind"); if (!b) return;
-      ev.kind = b.dataset.kind;
-      drawEvents();
-      Analytics.event("event-kind", { kind: ev.kind });
-    });
     const q = $("#evQ"), qClear = $("#evQClear");
     q.addEventListener("input", () => { ev.q = q.value; qClear.hidden = !q.value; drawEvents(); });
     qClear.addEventListener("click", () => { q.value = ""; ev.q = ""; qClear.hidden = true; drawEvents(); q.focus(); });
     // 담당자 닉네임(담당자 줄의 단추 · 그날 일정 안의 닉네임)을 누르면 그 사람이 맡은 일정만 남긴다. 빈 값이면 모두 보기
-    main.querySelector(".ev-col").addEventListener("click", (e) => {
+    const onOwner = (e) => {
       const b = e.target.closest("[data-owner]"); if (!b) return;
       ev.owner = b.dataset.owner;
       drawEvents();
       Analytics.event("event-owner", { on: !!ev.owner });
-    });
+    };
+    $("#evOwners").addEventListener("click", onOwner);
+    $("#dayPanel").addEventListener("click", onOwner);
     const turn = (by) => { ev.ym = Calendar.shiftMonth(ev.ym, by); calFocus = ""; drawCal(); Analytics.event("event-month", { month: ev.ym }); };
     $("#calPrev").addEventListener("click", () => turn(-1));
     $("#calNext").addEventListener("click", () => turn(1));

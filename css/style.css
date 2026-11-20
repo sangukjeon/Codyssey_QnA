@@ -525,8 +525,11 @@ main:focus { outline: none; }
 .rail-text { margin: 2px 0 6px; font-size: 0.9375rem; line-height: 1.57; color: var(--text-secondary); text-wrap: pretty; }
 
 /* ===== 이벤트: 정해진 날짜가 있는 일정 ===== */
-.ev-col { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; }
-.ev-col .sec-title { margin-bottom: 10px; }
+/* 왼쪽에 큰 달력, 오른쪽에 고른 날의 내용. 좁은 화면에서는 달력 → 그날 내용 → 목록 → 자주 묻는 질문 순으로 한 줄 */
+.ev-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+.ev-grid > * { min-width: 0; }
+.ev-grid > section.ev-sec { margin-top: 12px; }
+.ev-sec .sec-title { margin-bottom: 10px; }
 .sec-title .n { margin-left: 4px; font-size: 1rem; font-weight: 700; color: var(--primary); font-variant-numeric: tabular-nums; }
 .ev-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 /* 한 줄: [큰 날짜] 일정 이름 · 한 줄 설명 ……… D-day */
@@ -547,8 +550,7 @@ a.ev-row:active { background: var(--pressed); }
 .ev-past .ev-row { background: var(--gray-50); }
 .ev-past .ev-title { font-weight: 600; color: var(--text-secondary); }
 .ev-past .ev-date b { color: var(--text-secondary); }
-/* 행사 칸: 종류 단추 · 꼬리표 · 지난 것 머리 */
-.ev-kinds { margin: 0 0 12px; }
+/* 행사 칸: 꼬리표 · 지난 것 머리 */
 .ev-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
 .ev-tags .tag { min-height: 0; padding: 1px 8px; }
 .tag.tag-extra { color: var(--primary-strong); background: var(--blue-50); }
@@ -562,17 +564,24 @@ a.ev-row:active { background: var(--pressed); }
 .ev-info dd { margin: 0; font-size: 1rem; line-height: 1.5; color: var(--text-strong); }
 .ev-none { margin: 0; padding: 20px; background: var(--white); border: 1px dashed var(--border); border-radius: var(--r-300); font-size: 1rem; color: var(--text-secondary); }
 .ev-owner { display: block; margin-top: 2px; font-size: 0.875rem; line-height: 1.5; color: var(--text-3); }
-/* 지난 일정: 접어 두고, 누르면 펼친다 */
-details.ev-past > summary { display: flex; align-items: center; gap: 6px; min-height: 2.75rem; margin: 10px 0 0; cursor: pointer; list-style: none; }
-details.ev-past > summary::-webkit-details-marker { display: none; }
-details.ev-past > summary::before { content: ""; width: 8px; height: 8px; margin: 0 4px 2px 2px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(-45deg); transition: transform .15s var(--ease); }
-details.ev-past[open] > summary::before { transform: rotate(45deg); }
+/* 지난 일정 · 자주 묻는 질문: 접어 두고, 누르면 펼친다 */
+details.ev-past > summary, details.ev-faq > summary { display: flex; align-items: center; gap: 6px; min-height: 2.75rem; cursor: pointer; list-style: none; }
+details.ev-past > summary { margin: 10px 0 0; }
+details.ev-past > summary::-webkit-details-marker, details.ev-faq > summary::-webkit-details-marker { display: none; }
+details.ev-past > summary::before, details.ev-faq > summary::before { content: ""; width: 8px; height: 8px; margin: 0 4px 2px 2px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(-45deg); transition: transform .15s var(--ease); }
+details.ev-past[open] > summary::before, details.ev-faq[open] > summary::before { transform: rotate(45deg); }
 details.ev-past[open] > summary { margin-bottom: 8px; }
+/* 자주 묻는 질문: 일정 목록 아래에 접어 둔 한 줄 (달력 옆자리는 고른 날의 내용이 쓴다) */
+details.ev-faq { background: var(--white); border: 1px solid var(--divider-weak); border-radius: var(--r-400); }
+details.ev-faq > summary { min-height: 3.25rem; padding: 0 16px; font-size: 1.0625rem; line-height: 1.5; font-weight: 700; color: var(--text-strong); }
+details.ev-faq > summary .n { margin-left: 2px; font-size: 0.9375rem; color: var(--primary); font-variant-numeric: tabular-nums; }
+details.ev-faq > .link-list { padding: 0 8px 10px; border-top: 1px solid var(--divider-weak); }
+/* 달력에 무엇을 모았는지: 맨 아래 작은 안내 */
+.ev-note { margin: 0; font-size: 0.875rem; line-height: 1.6; color: var(--text-secondary); text-wrap: pretty; }
 
-/* ===== 이벤트 달력: 종류 단추 · 찾기 → 달력(일~토) → 그날 일정 ===== */
+/* ===== 이벤트 달력: 찾기 → 큰 달력(일~토) | 고른 날의 내용 ===== */
 /* 제목 줄 오른쪽: 일정 · 담당자 찾기 (공지사항 화면의 검색창과 같은 자리) */
-.ev-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; }
-.ev-head > div:first-child { min-width: 0; }
+.ev-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; }
 .ev-find {
   flex: 0 1 19rem; display: flex; align-items: center; gap: 6px; height: 3rem; padding: 0 2px 0 12px;
   background: var(--white); border: 1px solid var(--line-input); border-radius: var(--r-300); transition: border-color .15s var(--ease);
@@ -591,20 +600,27 @@ details.ev-past[open] > summary { margin-bottom: 8px; }
 .owner-btn { font-size: inherit; }
 
 .cal-card { background: var(--white); border: 1px solid var(--divider-weak); border-radius: var(--r-400); overflow: hidden; }
-.cal-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding: 12px 14px; }
-.cal-nav { display: flex; align-items: center; gap: 4px; }
-.cal-title { min-width: 7.25em; margin: 0 4px; text-align: center; font-size: 1.25rem; line-height: 1.4; font-weight: 700; color: var(--text-strong); font-variant-numeric: tabular-nums; }
+.cal-head { display: grid; gap: 10px; padding: 14px 14px 12px; }
+/* 달 넘기기는 가운데, '오늘'은 오른쪽 끝 (왼쪽 빈칸이 오른쪽과 같은 폭을 차지해 가운데가 맞는다. 좁으면 '오늘'의 폭부터 지킨다) */
+.cal-nav { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(max-content, 1fr); column-gap: 4px; align-items: center; }
+.cal-nav::before { content: ""; }
+.cal-move { display: flex; align-items: center; gap: 4px; }
+.cal-title { min-width: 7.25em; margin: 0 4px; text-align: center; font-size: 1.375rem; line-height: 1.4; font-weight: 700; color: var(--text-strong); font-variant-numeric: tabular-nums; }
 .cal-step {
   width: 2.75rem; height: 2.75rem; display: grid; place-items: center; border-radius: var(--r-300);
   border: 1px solid var(--line-input); background: var(--white); color: var(--text-strong); transition: background-color .1s var(--ease);
 }
 .cal-step:active { background: var(--pressed); }
 .cal-step:disabled { border-color: var(--border); color: var(--text-3); cursor: not-allowed; }
-.cal-today { margin-left: 8px; }
-/* 그달의 예정 운영진 추가 시간 합계 */
-.cal-sum { margin: 0; font-size: 0.9375rem; line-height: 1.5; color: var(--text-secondary); }
-.cal-sum b { font-size: 1.0625rem; color: var(--primary-strong); font-variant-numeric: tabular-nums; }
+.cal-today { justify-self: end; }
+/* 달력 위 한 줄: 그달의 예정 운영진 추가 시간 합계 · 일정 수 */
+.cal-sum { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 20px; margin: 0; padding: 8px 12px; border-radius: var(--r-300); background: var(--gray-50); font-size: 0.9375rem; line-height: 1.5; color: var(--text-secondary); }
+.cal-sum b { margin-left: 2px; font-size: 1.0625rem; color: var(--primary-strong); font-variant-numeric: tabular-nums; }
 .cal-sum-note { font-size: 0.875rem; }
+/* 달력 아래: 칸 색의 뜻 (행사 · 시험 · 마감 · 운영) */
+.cal-legend { display: flex; flex-wrap: wrap; gap: 2px 16px; margin: 0; padding: 10px 14px; border-top: 1px solid var(--divider-weak); font-size: 0.875rem; line-height: 1.5; color: var(--text-secondary); }
+.cal-legend > span { display: inline-flex; align-items: center; gap: 6px; }
+.cal-legend i { width: 10px; height: 10px; border-radius: 3px; background: var(--c-ic); }
 
 /* 달력 표: 7칸 고정 폭. 칸 하나가 단추 하나 (키보드로 ←→↑↓ 이동, Enter 로 그날 열기) */
 .cal { width: 100%; border-collapse: collapse; table-layout: fixed; }
@@ -630,7 +646,7 @@ details.ev-past[open] > summary { margin-bottom: 8px; }
   background: var(--c-bg); color: var(--c-tx); font-size: 0.8125rem; line-height: 1.45; font-weight: 600;
 }
 .cal-item.c-etc { --c-bg: #e3e7f0; }
-/* 칸이 좁아 이름은 두 줄까지만 — 전체 이름은 아래 그날 일정에 나온다 */
+/* 칸이 좁아 이름은 두 줄까지만 — 전체 이름은 옆(휴대폰은 아래)의 그날 내용에 나온다 */
 .cal-t { flex: 1; min-width: 0; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; } /* 낱말 단위로 꺾고, 한 낱말이 칸보다 길 때만 낱말 안에서 꺾는다 */
 .cal-item { align-items: flex-start; }
 .cal-item b { flex: none; font-weight: 700; font-variant-numeric: tabular-nums; } /* +2h */
@@ -642,32 +658,43 @@ details.ev-past[open] > summary { margin-bottom: 8px; }
   .cal-step:not(:disabled):hover { background: var(--pressed); }
 }
 
-/* 그날 일정: 달력 바로 아래에 열린다 */
-.day-panel { padding: 14px 16px 16px; border-top: 1px solid var(--divider-weak); background: var(--gray-50); }
-.day-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
-.day-title { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 1.125rem; line-height: 1.45; font-weight: 700; color: var(--text-strong); }
+/* 고른 날의 내용: 넓은 화면에서는 달력 오른쪽 칸, 좁은 화면에서는 달력 바로 아래 */
+.day-panel { padding: 16px; background: var(--white); border: 1px solid var(--divider-weak); border-radius: var(--r-400); }
+.day-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 12px; }
+.day-title { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 1.25rem; line-height: 1.4; font-weight: 700; color: var(--text-strong); }
 .day-title:focus { outline: none; }
-.day-title .n { font-size: 0.9375rem; font-weight: 600; color: var(--primary-strong); font-variant-numeric: tabular-nums; }
+.day-total { margin: 0; font-size: 1rem; line-height: 1.5; font-weight: 700; color: var(--primary-strong); font-variant-numeric: tabular-nums; }
+.day-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; padding-bottom: 12px; border-bottom: 1px solid var(--divider-weak); }
+.day-bar .copy-link { margin: 0; }
+.day-count { margin: 0; font-size: 0.9375rem; line-height: 1.5; font-weight: 600; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
 .day-hint { margin: 0; font-size: 0.9375rem; line-height: 1.5; color: var(--text-secondary); }
-.day-head + .day-hint { margin-top: 8px; }
-.day-list { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
-.day-item { min-width: 0; padding: 12px 14px; background: var(--white); border: 1px solid var(--divider-weak); border-radius: var(--r-300); }
+.day-bar + .day-hint { margin-top: 14px; }
+/* 일정마다 판을 또 두르지 않고 가로줄로만 나눈다 */
+.day-list { list-style: none; margin: 0; padding: 0; }
+.day-item { min-width: 0; padding: 14px 0; border-bottom: 1px solid var(--divider-weak); }
+.day-item:last-child { padding-bottom: 0; border-bottom: 0; }
 .day-name { margin: 0; font-size: 1.0625rem; line-height: 1.45; font-weight: 700; color: var(--text-strong); text-wrap: pretty; }
 .day-sub { margin: 2px 0 0; font-size: 0.9375rem; line-height: 1.5; color: var(--text-secondary); text-wrap: pretty; }
-.day-meta { margin: 8px 0 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px 12px; }
+.day-meta { margin: 8px 0 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 12px; }
 .day-meta dt { font-size: 0.8125rem; line-height: 1.5; font-weight: 600; color: var(--text-secondary); }
 .day-meta dd { margin: 0; font-size: 0.9375rem; line-height: 1.5; color: var(--text-strong); overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 .day-wait { color: var(--text-3); }
-.day-src { margin: 10px 0 0; padding-top: 8px; border-top: 1px solid var(--divider-weak); display: flex; flex-wrap: wrap; gap: 2px 12px; font-size: 0.9375rem; line-height: 1.5; }
+.day-src { margin: 10px 0 0; display: flex; flex-wrap: wrap; gap: 2px 12px; font-size: 0.9375rem; line-height: 1.5; }
 .day-src b { font-weight: 600; color: var(--text-secondary); }
 .day-src a { text-decoration: none; }
 .day-src .ttl { font-weight: 600; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
 
-/* 좁은 화면: 작은 달력 — 칸에는 날짜와 점(●), 그날 추가 시간 합계만. 날짜를 누르면 아래에 그날 일정이 열린다 */
+/* 가운데 폭(태블릿): 그날 내용이 달력 아래로 내려가 넓어지므로 시간 · 장소 · 추가 시간 · 담당자를 한 줄에 */
+@media (min-width: 720px) and (max-width: 1023px) {
+  .day-meta { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+/* 좁은 화면: 작은 달력 — 칸에는 날짜와 점(●), 그날 추가 시간 합계만. 날짜를 누르면 달력 아래에 그날 내용이 나온다 */
 @media (max-width: 719px) {
   .ev-find { flex-basis: 100%; }
-  .cal-head { padding: 10px; }
-  .cal-title { min-width: 6.75em; font-size: 1.125rem; }
+  .cal-head { padding: 10px; gap: 8px; }
+  .cal-title { min-width: 6.5em; margin: 0 2px; font-size: 1.125rem; }
+  .cal-sum { padding: 6px 10px; }
+  .cal-legend { padding: 8px 10px; }
   .cal-td { height: 3.5rem; }
   .cal-day { min-height: 3.5rem; align-items: center; gap: 2px; padding: 4px 1px 5px; }
   .cal-top { justify-content: center; }
@@ -676,8 +703,7 @@ details.ev-past[open] > summary { margin-bottom: 8px; }
   .cal-dots > span { display: flex; justify-content: center; gap: 3px; }
   .cal-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--c-ic); }
   .cal-dots b { font-size: 0.6875rem; line-height: 1.2; font-weight: 700; color: var(--primary-strong); font-variant-numeric: tabular-nums; }
-  .day-panel { padding: 12px; }
-  .day-meta { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .day-panel { padding: 14px; }
 }
 
 /* 링크 복사 */
@@ -883,6 +909,13 @@ details.ev-past[open] > summary { margin-bottom: 8px; }
   .pager-nav a { padding: 14px 28px; }
   .back-row { max-width: calc(100% - 19rem - 24px); }
 
+  /* 이벤트: 왼쪽 큰 달력 | 오른쪽 고른 날의 내용 (스크롤해도 따라오고, 길면 그 칸 안에서 넘긴다) */
+  .ev-grid { grid-template-columns: minmax(0, 1fr) 21rem; column-gap: 20px; }
+  .ev-grid > * { grid-column: 1; }
+  .ev-grid > .day-panel { grid-column: 2; grid-row: 1 / span 4; position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow-y: auto; overscroll-behavior: contain; }
+  .cal-td { height: 7.25rem; }
+  .cal-day { min-height: 7.25rem; padding: 6px 6px 8px; }
+
   .chat {
     left: auto; right: 24px; bottom: 24px; width: 400px; height: min(680px, calc(100vh - 48px));
     border-radius: var(--r-600); transform: translateY(16px); opacity: 0;
@@ -897,7 +930,7 @@ details.ev-past[open] > summary { margin-bottom: 8px; }
 /* ===== 좁은 화면 (태블릿 · 휴대폰) ===== */
 @media (max-width: 1023px) {
   /* 분류 탭: 한 줄로 두고 옆으로 민다 (화면 끝에서 잘린 탭이 '더 있다'는 표시) */
-  .cat-bar, .ev-kinds { margin-left: calc(var(--gutter) * -1); margin-right: calc(var(--gutter) * -1); }
+  .cat-bar { margin-left: calc(var(--gutter) * -1); margin-right: calc(var(--gutter) * -1); }
   .cat-tabs { flex-wrap: nowrap; padding: 0 var(--gutter); overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; }
   .cat-tabs::-webkit-scrollbar { display: none; }
   .finder { flex-basis: 100%; } /* 검색창은 한 줄을 다 쓴다 */

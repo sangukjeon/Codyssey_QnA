@@ -32,10 +32,12 @@ const nov = Calendar.inMonth(CAL, "2026-11");
 const kinds = [...EVENT_KINDS, ...SCHEDULE_KINDS].map((k) => k.id);
 
 // 같은 날 같은 일은 한 번만 (R2)
-check("11/20 은 간식데이와 시험, 둘뿐", day("2026-11-20").map((x) => x.kind), ["snack", "exam"]);
+// 같은 날에 다른 일정(예: Term-Project 시작)이 더 실려도 깨지지 않게, 종류마다 한 번인지를 센다
+const exam20 = day("2026-11-20").find((x) => x.kind === "exam");
+check("11/20 은 간식데이와 시험이 한 번씩만", ["snack", "exam"].map((k) => day("2026-11-20").filter((x) => x.kind === k).length), [1, 1]);
 check("11/20 간식데이: 행사 공지 이름을 쓰고 운영표와 합쳐짐", day("2026-11-20").filter((x) => x.kind === "snack").map((x) => [x.title.replace(/⁠/g, ""), x.origins]), [["간식데이 3회차", ["fest", "ops"]]]);
 check("11/20 시험: 운영표 이름을 쓰고 SCHEDULE 과 합쳐짐", day("2026-11-20").filter((x) => x.kind === "exam").map((x) => [x.title, x.origins]), [["입학연수과정 시험 3차", ["ops", "sched"]]]);
-check("11/20 시험: SCHEDULE 의 한 줄 설명이 따라옴", /참석자 명단/.test(day("2026-11-20")[1].sub), true);
+check("11/20 시험: SCHEDULE 의 한 줄 설명이 따라옴", /참석자 명단/.test(exam20.sub), true);
 check("11/6 · 11/13 시험도 하루에 한 번", ["2026-11-06", "2026-11-13"].map((d) => day(d).filter((x) => x.kind === "exam").length), [1, 1]);
 check("운영표의 모든 줄이 11월 달력에 있음", OPS_SCHEDULE.filter((o) => !nov.some((x) => Calendar.same(x, o))).map((o) => o.title), []);
 check("운영표는 표 11줄(날짜 11개)에서 옴", new Set(OPS_SCHEDULE.map((o) => o.date)).size, 11);
@@ -45,12 +47,12 @@ check("종류는 모두 정해진 것 중 하나", CAL.filter((x) => !kinds.incl
 
 // 출처 (R2 · R3)
 check("운영표에서 온 일정마다 '11월 운영 일정' 공지 링크", CAL.filter((x) => x.origins.includes("ops") && !x.links.some((l) => l.href === `#notice/${OPS_SOURCE}`)).map((x) => x.title), []);
-check("11/20 시험: 참석자 명단 공지가 먼저, 운영표 공지가 다음", day("2026-11-20")[1].links.map((l) => l.href), ["#notice/22", `#notice/${OPS_SOURCE}`]);
+check("11/20 시험: 참석자 명단 공지가 먼저, 운영표 공지가 다음", exam20.links.map((l) => l.href), ["#notice/22", `#notice/${OPS_SOURCE}`]);
 check("12/31 사물함 마감은 질문 16으로 이어짐", day("2026-12-31").map((x) => [x.title, x.links.map((l) => l.href)]), [["사물함 비우기 마감", ["#faq/16"]]]);
 
 // 예정 추가 시간 (R3)
 check("11/18: 설명회 +1, 네트워킹 +2 (시작 시각 순)", day("2026-11-18").map((x) => [x.kind, x.extra]), [["seminar", 1], ["network", 2]]);
-check("11/20 시험 +3", day("2026-11-20")[1].extra, 3);
+check("11/20 시험 +3", exam20.extra, 3);
 check("11월 예정 추가 시간 합계 6시간", Calendar.extraTotal(nov), 6);
 check("추가 시간이 적힌 일정은 셋뿐 — 나머지는 0 (지어내지 않음)", CAL.filter((x) => x.extra).length, 3);
 check("12월 합계 0", Calendar.extraTotal(Calendar.inMonth(CAL, "2026-12")), 0);
@@ -68,7 +70,7 @@ check("달 넘기기", [Calendar.shiftMonth("2026-11", 1), Calendar.shiftMonth("
 check("날 넘기기 (달을 넘어감)", [Calendar.shiftDay("2026-11-30", 1), Calendar.shiftDay("2026-11-01", -1), Calendar.shiftDay("2026-11-20", 7)], ["2026-12-01", "2026-10-31", "2026-11-27"]);
 
 // 칸 이름 (R7)
-check("칸 이름: 11월 20일", Calendar.dayLabel("2026-11-20", day("2026-11-20")), "11월 20일 금요일, 일정 2개, 추가 3시간");
+check("칸 이름: 11월 20일", Calendar.dayLabel("2026-11-20", day("2026-11-20").filter((x) => x.kind === "snack" || x.kind === "exam")), "11월 20일 금요일, 일정 2개, 추가 3시간");
 check("칸 이름: 일정 없는 날", Calendar.dayLabel("2026-11-21", day("2026-11-21")), "11월 21일 토요일, 일정 없음");
 check("날짜 꼴 확인", ["2026-11-20", "2026-11-31", "2026-13-01", "event"].map(Calendar.isDate), [true, false, false, false]);
 
