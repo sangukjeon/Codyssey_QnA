@@ -42,8 +42,11 @@
  * MAKERS       만든 사람 — 이름과 깃허브 이름 (발의 "Made by …" 단추와 팀 소개 창)
  * TEAM         팀 소개 창 — 역할별 설명과 맡은 사람
  * EVENT_KINDS  행사 종류 — 미션데이 · 간식데이 · 네트워킹 데이 · 취업 멘토링 · 창업 멘토링 · 세미나
- * SCHEDULE     '이벤트' 화면 아래의 일정(시험 · 마감) — 바뀌지 않는 날짜만 넣는다. 지난 날짜는 '지난 일정'으로 내려간다
- *              행사는 여기에 넣지 않고, 행사 공지에 event 를 붙인다
+ * SCHEDULE_KINDS  행사가 아닌 일정의 종류 — 시험 · 마감 · 운영 ('이벤트' 달력의 종류 단추에 행사 종류 뒤로 붙는다)
+ * SCHEDULE     시험 · 마감 일정 — 바뀌지 않는 날짜만 넣는다. 행사는 여기에 넣지 않고, 행사 공지에 event 를 붙인다
+ * OPS_SCHEDULE 운영표 — '11월 운영 일정' 공지(OPS_SOURCE)의 표를 일정 하나씩으로 옮긴 것
+ *              '이벤트' 화면의 달력은 행사 공지(event) · OPS_SCHEDULE · SCHEDULE 셋을 합쳐 그린다 (js/calendar.js).
+ *              같은 날 같은 일이 여러 곳에 있어도 화면에는 한 번만 나온다
  * EVENT_FAQS   '이벤트' 화면 옆 칸에 보여 줄, 행사 참여 · 신청에 관한 질문 id
  */
 
@@ -711,21 +714,62 @@ const FAQS = [
   },
 ];
 
+/* 행사가 아닌 일정의 종류 ('이벤트' 달력의 종류 단추 — 행사 종류 뒤에 붙는다) */
+const SCHEDULE_KINDS = [
+  { id: "exam", name: "시험" },
+  { id: "deadline", name: "마감" },
+  { id: "ops", name: "운영" },
+];
+
 /* 사이트 내용을 마지막으로 고친 날 — 공지·질문을 고치면 함께 바꿔 주세요 */
 const UPDATED = "2026-11-20";
 
 /*
- * '이벤트' 화면 아래의 일정 (시험 · 마감)
+ * 시험 · 마감 일정 ('이벤트' 화면의 달력과 목록에 나온다)
  * 행사(미션데이 · 간식데이 …)는 여기 말고 행사 공지의 event 에 적는다. 여기에는 공지에 적힌 바뀌지 않는 날짜만 넣는다.
  *   date "YYYY-MM-DD", title 일정 이름, sub 한 줄 설명(선택), faq / notice 자세히 볼 질문·공지 id(선택)
+ *   kind SCHEDULE_KINDS 의 id — 달력에서 운영표의 같은 날 같은 종류 일정과 하나로 합쳐진다 (예: 11/20 "시험" = "입학연수과정 시험 3차")
  */
 const SCHEDULE = [
-  { date: "2026-11-06", title: "시험", sub: "14시 또는 19시 중 선택 · 4·5층 사용 불가", faq: 21 },
-  { date: "2026-11-13", title: "시험", sub: "14시 또는 19시 중 선택 · 4·5층 사용 불가", faq: 21 },
-  { date: "2026-11-20", title: "시험", sub: "14시 또는 19시 · 입실 13:50 / 18:50까지 · 참석자 명단에서 내 회차 확인", notice: 22 },
-  { date: "2026-11-26", title: "Term-Project 제출 마감", sub: "오후 2시까지 codyssey042@gmail.com · 기한을 넘기면 장학금 대상에서 빠집니다", notice: 23 },
-  { date: "2026-11-27", title: "입학연수과정 종료", sub: "장학금 출입 시간(80시간)도 이날까지 셉니다", notice: 12 },
-  { date: "2026-12-31", title: "사물함 비우기 마감", sub: "남은 물품은 사전 통보 없이 폐기됩니다", faq: 16 },
+  { date: "2026-11-06", kind: "exam", title: "시험", sub: "14시 또는 19시 중 선택 · 4·5층 사용 불가", faq: 21 },
+  { date: "2026-11-13", kind: "exam", title: "시험", sub: "14시 또는 19시 중 선택 · 4·5층 사용 불가", faq: 21 },
+  { date: "2026-11-20", kind: "exam", title: "시험", sub: "14시 또는 19시 · 입실 13:50 / 18:50까지 · 참석자 명단에서 내 회차 확인", notice: 22 },
+  { date: "2026-11-26", kind: "deadline", title: "Term-Project 제출 마감", sub: "오후 2시까지 codyssey042@gmail.com · 기한을 넘기면 장학금 대상에서 빠집니다", notice: 23 },
+  { date: "2026-11-27", kind: "deadline", title: "입학연수과정 종료", sub: "장학금 출입 시간(80시간)도 이날까지 셉니다", notice: 12 },
+  { date: "2026-12-31", kind: "deadline", title: "사물함 비우기 마감", sub: "남은 물품은 사전 통보 없이 폐기됩니다", faq: 16 },
+];
+
+/*
+ * 운영표 — '11월 운영 일정' 공지의 표 11줄을 일정 하나씩으로 옮긴 것 ('이벤트' 화면의 달력에 나온다)
+ *   date · title  표에 적힌 날짜와 이름 (한 줄에 둘이 적힌 날은 둘로 나눴다)
+ *   kind          EVENT_KINDS 또는 SCHEDULE_KINDS 의 id.
+ *                 설명회 · 특강 · 가이드는 seminar(세미나), 다른 과정 · 기관의 일정은 ops(운영)로 두었다 — 다르게 나누려면 kind 만 바꾼다
+ *   time · place  (선택) 그 행사 공지에 적힌 시각 · 장소. 모르면 적지 않는다
+ *   extra         (선택) 운영진 추가 시간 — 시간 단위 숫자. 공지로 확인된 것만 적는다 (모르면 칸을 두지 않는다. 지어내지 않는다)
+ *                 확인된 값: 텀 프로젝트 설명회 1시간 · 교육생 네트워킹 2시간 · 3차 시험 3시간
+ *   owner         담당자 디스코드 닉네임. 아직 모으지 않아 모두 빈 문자열 — 화면에는 '담당자 확인 중'으로 나온다.
+ *                 닉네임을 적으면 달력에서 그 닉네임을 눌러 그 사람이 맡은 일정만 볼 수 있다
+ *   notice        (선택) 자세한 내용이 있는 공지 id — 출처 줄에 운영표 공지보다 먼저 나온다
+ */
+const OPS_SOURCE = 24; // 운영표가 실린 공지 id — 달력의 출처 줄에 링크로 나온다
+const OPS_SCHEDULE = [
+  // 주요 일정 (표 3줄)
+  { date: "2026-11-19", title: "네이티브 간담회 (AI 네이티브 과정)", kind: "ops", owner: "" },
+  { date: "2026-11-26", title: "서울이노베이션아카데미 성과공유 컨퍼런스", kind: "ops", owner: "" },
+  { date: "2026-11-30", title: "코디세이 AI 네이티브 수료식 (AI 네이티브 과정)", kind: "ops", owner: "" },
+  // AI 올인원 일정 (표 8줄)
+  { date: "2026-11-03", title: "미션데이 1차", kind: "mission", owner: "" },
+  { date: "2026-11-04", title: "플랫폼 가이드 4차", kind: "seminar", owner: "" },
+  { date: "2026-11-06", title: "간식데이 1차", kind: "snack", owner: "" },
+  { date: "2026-11-06", title: "입학연수과정 시험 1차", kind: "exam", owner: "" },
+  { date: "2026-11-10", title: "전문가 특강 1차", kind: "seminar", owner: "" },
+  { date: "2026-11-13", title: "간식데이 2차", kind: "snack", owner: "" },
+  { date: "2026-11-13", title: "입학연수과정 시험 2차", kind: "exam", owner: "" },
+  { date: "2026-11-17", title: "미션데이 2차", kind: "mission", owner: "" },
+  { date: "2026-11-18", title: "텀 프로젝트 설명회", kind: "seminar", time: "16:00~17:00", place: "3층 컨퍼런스홀", extra: 1, owner: "" },
+  { date: "2026-11-18", title: "교육생 네트워킹 HELLO, ALL IN ONE!", kind: "network", time: "18:00~20:00", place: "3층 라운지", extra: 2, owner: "" },
+  { date: "2026-11-20", title: "간식데이 3차", kind: "snack", owner: "" },
+  { date: "2026-11-20", title: "입학연수과정 시험 3차", kind: "exam", time: "14:00 · 19:00", place: "4 · 5층", extra: 3, owner: "", notice: 22 },
 ];
 
 /* '이벤트' 화면 옆 칸에 보여 줄, 행사 참여 · 신청에 관한 질문 id */
