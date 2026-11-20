@@ -47,7 +47,7 @@
  * OPS_SCHEDULE 운영표 — '11월 운영 일정' 공지(OPS_SOURCE)의 표를 일정 하나씩으로 옮긴 것
  *              '이벤트' 화면의 달력은 행사 공지(event) · OPS_SCHEDULE · SCHEDULE 셋을 합쳐 그린다 (js/calendar.js).
  *              같은 날 같은 일이 여러 곳에 있어도 화면에는 한 번만 나온다
- * EVENT_FAQS   '이벤트' 화면 옆 칸에 보여 줄, 행사 참여 · 신청에 관한 질문 id
+ * EVENT_FAQS   '이벤트' 화면 아래 "자주 묻는 질문"(접어 둠)과 행사 공지 옆 칸에 보여 줄, 행사 참여 · 신청에 관한 질문 id
  */
 
 const CATEGORIES = [
@@ -786,7 +786,7 @@ const OPS_SCHEDULE = [
   { date: "2026-11-20", title: "입학연수과정 시험 3차", kind: "exam", time: "14:00 · 19:00", place: "4 · 5층", extra: 3, owner: "", notice: 22 },
 ];
 
-/* '이벤트' 화면 옆 칸에 보여 줄, 행사 참여 · 신청에 관한 질문 id */
+/* '이벤트' 화면 아래 "자주 묻는 질문"(접어 둠)과 행사 공지 옆 칸에 보여 줄, 행사 참여 · 신청에 관한 질문 id */
 const EVENT_FAQS = [72, 73, 77, 80, 83, 74, 63];
 
 /*
