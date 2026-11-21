@@ -1,4 +1,5 @@
-(() => {
+/* 운영진 입력판(js/ops.js)을 읽은 뒤에 그리려고 함수로 둔다. 맨 끝에서 부른다 */
+const startApp = () => {
   "use strict";
 
   /* ---------- 유틸 ---------- */
@@ -89,6 +90,12 @@
     .map((l) => l.replace(/^\s*[#-]\s+/, "").replace(/\s*\|\s*/g, " ").trim())
     .filter(Boolean).join(" ");
   const homeOf = (f) => (f.related || [])[0];
+  // 고정에 끝(pinUntil: "2026-11-26 14:00" · "2026-11-20")이 있으면 그때가 지나면 저절로 풀린다. 운영진 입력판의 고정도 같은 칸을 쓴다
+  const pinOk = (until) => {
+    if (!until || typeof OpsSheet === "undefined") return true;
+    const t = OpsSheet.toStamp(until, { end: true });
+    return isNaN(t) || Date.now() <= t;
+  };
   const POSTS = NOTICES.map((n) => {
     const qas = FAQS.filter((f) => homeOf(f) === n.id).map((f) => {
       const nQ = N(f.q), nA = N(f.a);
@@ -102,7 +109,7 @@
       src: n, id: n.id, key: `n${n.id}`, cat: n.cat, href: `#notice/${n.id}`, title: n.title, body: n.body, plain: plainOf(n.body),
       own, date, qas, fresh: date > own ? qas.filter((x) => x.date === date) : [],
       renewed: date > own ? qas.filter((x) => x.upd === date && x.date !== date) : [], // 그날 답이 바뀐 질문
-      pin: !!n.pinned, nTitle, nBody,
+      pin: !!n.pinned && pinOk(n.pinUntil), nTitle, nBody,
     };
   });
   const postOf = (id) => POSTS.find((p) => p.id === id);
@@ -250,6 +257,11 @@
   const TAG_NEW = '<span class="tag tag-new">NEW</span>';
   const TAG_UPD = '<span class="tag tag-new">업데이트</span>'; // 답을 고친 뒤 7일 (data.js 의 updated)
   const TAG_PIN = '<span class="tag tag-pin">중요</span>';
+  // 운영진 입력판의 '답 확인' 탭: 맞음 → 운영진 확인, 고침 + 고친 답 → 운영진 수정(답이 바뀜), 고침인데 고친 답이 비면 → 고치는 중
+  const opsTag = (f) => (!f.ops ? "" : f.ops.state === "ok" ? '<span class="tag tag-ops">운영진 확인</span>'
+    : f.ops.state === "fixed" ? '<span class="tag tag-ops">운영진 수정</span>' : '<span class="tag tag-fixing">고치는 중</span>');
+  const opsLine = (f) => (!f.ops ? "" : `<p class="faq-ops ${f.ops.state}">${f.ops.state === "ok" ? "운영진이 이 답을 확인했습니다"
+    : f.ops.state === "fixed" ? "운영진이 고친 답입니다" : "운영진이 이 답을 고치고 있습니다. 바뀌기 전까지는 디스코드 공지를 먼저 확인해 주세요"}${f.ops.date ? ` · ${fmtDate(f.ops.date)}` : ""}</p>`);
 
   /* ---------- 링크 복사 ---------- */
   const COPY_LABEL = "링크 복사";
@@ -293,13 +305,13 @@
   const relatedNotices = (f) => (f.related || []).map((nid) => NOTICES.find((n) => n.id === nid)).filter(Boolean);
   const qaItem = (f) => `<li class="qa-item" id="q-${f.id}"><h3 class="post-h"><button class="qa-row q-row" type="button" id="qb-${f.id}" aria-expanded="false" aria-controls="qa-${f.id}" data-id="${f.id}">
       <span class="faq-mark" aria-hidden="true">Q</span>
-      <span class="qa-q"><span${rd(`f${f.id}`)}>${esc(f.q)}${READ_NOTE}</span>${isNew(f.added) ? TAG_NEW : isNew(f.updated) ? TAG_UPD : ""}</span>
+      <span class="qa-q"><span${rd(`f${f.id}`)}>${esc(f.q)}${READ_NOTE}</span>${isNew(f.added) ? TAG_NEW : isNew(f.updated) ? TAG_UPD : ""}${opsTag(f)}</span>
       <span class="chev">${ICON.chevD}</span>
     </button></h3><div class="q-panel" id="qa-${f.id}" role="region" aria-labelledby="qb-${f.id}" hidden></div></li>`;
   // 펼친 답: 답, 출처, (이 공지 말고) 함께 볼 공지, 링크 복사
   function faqAnswer(f) {
     const others = relatedNotices(f).filter((n) => n.id !== homeOf(f));
-    return `<div class="faq-a-box">${paras(f.a)}</div>${f.src ? `<p class="faq-src">출처: ${esc(f.src)}</p>` : ""}
+    return `<div class="faq-a-box">${paras(f.a)}</div>${opsLine(f)}${f.src ? `<p class="faq-src">출처: ${esc(f.src)}</p>` : ""}
       ${others.length ? `<div class="attach info"><h4>함께 볼 공지</h4><ul>${others.map((n) => `<li><a href="#notice/${n.id}">${ICON.doc}<span${rd(`n${n.id}`)}>${esc(n.title)}${READ_NOTE}</span></a></li>`).join("")}</ul></div>` : ""}
       <div class="q-panel-foot">${copyBtn(`#faq/${f.id}`)}</div>`;
   }
@@ -430,7 +442,7 @@
   const answerCard = (f) => `<section class="answer-card" aria-labelledby="h-ans">
       <p class="answer-kicker">${ICON.check}가장 가까운 답</p>
       <h3 class="answer-q" id="h-ans"><span class="faq-mark" aria-hidden="true">Q</span> ${esc(f.q)}</h3>
-      <div class="faq-a-box">${paras(f.a)}</div>
+      <div class="faq-a-box">${paras(f.a)}</div>${opsLine(f)}
       <div class="answer-actions">
         <a class="btn btn-tertiary btn-s" href="#faq/${f.id}">이 답이 있는 공지 보기</a>
         <button class="btn btn-tertiary btn-s" type="button" data-open-chat>챗봇에게 더 묻기</button>
@@ -654,13 +666,16 @@
   // 달 넘기기는 일정이 있는 달과 이번 달 사이에서만
   const calRange = () => { const ms = [...Calendar.months(CALENDAR), Calendar.monthOf(todayStr())].sort(); return [ms[0], ms[ms.length - 1]]; };
   const NONE = '<span class="day-wait">공지에 없음</span>'; // 모르는 칸은 지어내지 않고 비워 둔다
+  // 추가 시간 반영 상태 꼬리표 (운영진 입력판에 적힌 것만): 예정 · 반영 중 · 반영 완료
+  const statusTag = (x) => (x.extra && x.status
+    ? `<span class="tag tag-st ${x.status === "반영 완료" ? "st-done" : x.status === "반영 중" ? "st-doing" : "st-plan"}">${esc(x.status)}</span>` : "");
   // 달력 칸 · 점의 색이 무엇인지 (달력 아래 작은 안내)
   const CAL_LEGEND = [["c-event", "행사"], ["c-task", "시험"], ["c-facility", "마감"], ["c-etc", "운영"]];
 
   // 목록 한 줄: 큰 날짜 + [종류 · 추가 시간] 이름 + 시각 · 장소 · 담당자 + D-day. 누르면 출처 공지로 (없으면 그날로)
   function eventRow(s) {
     const d = parseDate(s.date), link = s.links[0], title = esc(glueTight(s.title));
-    const tags = `<span class="tag ${calKindClass(s.kind)}">${esc(calKindName(s.kind))}</span>${s.extra ? `<span class="tag tag-extra">추가 시간 ${Calendar.hoursText(s.extra)}</span>` : ""}`;
+    const tags = `<span class="tag ${calKindClass(s.kind)}">${esc(calKindName(s.kind))}</span>${s.extra ? `<span class="tag tag-extra">추가 시간 ${Calendar.hoursText(s.extra)}</span>` : ""}${statusTag(s)}`;
     const sub = [s.time, s.place].filter(Boolean).join(" · ") || s.sub;
     return `<li><a class="ev-row" href="${link ? link.href : `#event/${s.date}`}">
       <span class="ev-date" aria-hidden="true"><b>${d.getDate()}</b><span>${d.getMonth() + 1}월 · ${DOW[d.getDay()]}</span></span>
@@ -709,14 +724,16 @@
 
   // 고른 날의 내용: 달력 오른쪽 칸(휴대폰은 달력 아래)에 그날 일정을 줄마다 — 시간 · 장소 · 추가 시간 · 담당자 · 출처 공지
   const dayItem = (it) => `<li class="day-item">
-      <div class="ev-tags"><span class="tag ${calKindClass(it.kind)}">${esc(calKindName(it.kind))}</span>${it.extra ? `<span class="tag tag-extra">추가 시간 ${Calendar.hoursText(it.extra)}</span>` : ""}</div>
+      <div class="ev-tags"><span class="tag ${calKindClass(it.kind)}">${esc(calKindName(it.kind))}</span>${it.extra ? `<span class="tag tag-extra">추가 시간 ${Calendar.hoursText(it.extra)}</span>` : ""}${statusTag(it)}</div>
       <p class="day-name">${esc(glueTight(it.title))}</p>
       ${it.sub ? `<p class="day-sub">${esc(glueTight(it.sub))}</p>` : ""}
       <dl class="day-meta">
         <div><dt>시간</dt><dd>${it.time ? esc(glueTight(it.time)) : NONE}</dd></div>
         <div><dt>장소</dt><dd>${it.place ? esc(it.place) : NONE}</dd></div>
         <div><dt>추가 시간</dt><dd>${it.extra ? Calendar.hoursText(it.extra) : NONE}</dd></div>
+        ${it.extra ? `<div><dt>반영</dt><dd>${it.status ? esc(it.status) : '<span class="day-wait">운영진 확인 전</span>'}</dd></div>` : ""}
         <div><dt>담당자</dt><dd>${it.owner ? `<button class="text-link owner-btn" type="button" data-owner="${esc(it.owner)}">${esc(it.owner)}</button>` : '<span class="day-wait">담당자 확인 중</span>'}</dd></div>
+        ${it.apply || it.applyBy ? `<div><dt>신청</dt><dd>${it.apply ? `<a class="text-link" href="${esc(it.apply)}" target="_blank" rel="noopener">신청하기</a>` : ""}${it.apply && it.applyBy ? " · " : ""}${it.applyBy ? `마감 ${esc(it.applyBy)}` : ""}</dd></div>` : ""}
       </dl>
       ${it.links.length ? `<p class="day-src"><b>출처</b>${it.links.map((l) => `<a href="${l.href}"><span${rd(l.key)}>${esc(l.text)}${READ_NOTE}</span></a>`).join("")}</p>` : ""}
     </li>`;
@@ -892,6 +909,96 @@
     location.hash = "#home";
   });
 
+  /* ---------- 화면: 운영진용 (#ops) — 운영진 입력판(구글 시트)에 적은 것이 사이트에 어떻게 나오는지 ---------- */
+  // 고치는 일은 시트에서 하고, 여기서는 결과와 잘못 적힌 줄만 본다 (메뉴에는 없고 발의 링크로 들어온다)
+  const p2 = (n) => String(n).padStart(2, "0");
+  const stampText = (ms) => { const d = new Date(ms); return `${d.getMonth() + 1}월 ${d.getDate()}일 (${DOW[d.getDay()]}) ${p2(d.getHours())}:${p2(d.getMinutes())}`; };
+  const md = (date) => `${+date.slice(5, 7)}/${+date.slice(8, 10)}`;
+  const OPS_STATE = { on: "나오는 중", soon: "시작 전", ended: "끝남", hidden: "숨김" };
+  function renderOps() {
+    setTitle("운영진용 화면"); setTab("");
+    const has = typeof OpsSheet !== "undefined", info = has ? OpsSheet.info() : { source: "none", read: {}, problems: [] };
+    const r = info.read || {}, edit = has ? OpsSheet.editUrl() : "";
+    const status = !edit ? "운영진 입력판이 아직 연결되지 않았습니다."
+      : info.source === "sheet" ? `${stampText(info.at)}에 시트에서 읽었습니다.`
+      : info.source === "cache" ? `${stampText(info.at)}에 시트에서 읽어 이 브라우저에 저장해 둔 내용입니다.`
+      : "지금은 시트를 읽지 못해 사이트에 원래 적힌 내용을 보여 줍니다.";
+    const box = (title, inner, note = "", cls = "") => `<section class="ops-box${cls ? ` ${cls}` : ""}"><h2>${esc(title)}</h2>${note ? `<p class="ops-note">${esc(note)}</p>` : ""}${inner}</section>`;
+    const none = (t) => `<p class="ops-none">${esc(t)}</p>`;
+    // 잘못 적힌 줄
+    const probs = info.problems || [];
+    const probBox = probs.length
+      ? box(`고칠 줄 ${probs.length}개`, `<ul class="ops-list">${probs.map((p) => `<li><b>${esc(p.tab)} 탭 ${p.row}번째 줄</b> ${esc(p.msg)}</li>`).join("")}</ul>`, "", "warn")
+      : info.source === "none" ? "" : `<p class="ops-ok">${ICON.check}잘못 적힌 줄이 없습니다.</p>`;
+    // 맨 위 알림 · 고정
+    const al = (r.pins && r.pins.alerts) || [], pins = (r.pins && r.pins.pins) || [];
+    const ttl = (id) => (NOTICES.find((n) => n.id === id) || {}).title || `공지 ${id}`;
+    const alertBox = box("모든 화면 맨 위 알림", al.length ? table([["내용", "상태", "끝"], ...al.map((a) => [a.text, OPS_STATE[a.state], a.untilText || "끝 없음"])])
+      : none(r.pins ? "적힌 알림이 없습니다." : "시트를 읽지 못했습니다."));
+    const pinBox = box("공지사항 맨 위 고정 (중요)", pins.length ? table([["공지", "상태", "끝"], ...pins.map((p) => [`${p.notice} · ${ttl(p.notice)}`, OPS_STATE[p.state], p.untilText || "끝 없음"])])
+      : none(r.pins ? "고정한 공지가 없습니다." : "시트를 읽지 못해 원래 고정(data.js)을 씁니다."));
+    // 이벤트 달력
+    const items = r.schedule ? r.schedule.items.slice().sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0)) : [];
+    const withExtra = items.filter((it) => it.extra), blank = (v) => v || "비어 있음";
+    const schNote = items.length ? `추가 시간이 적힌 일정 ${withExtra.length}개 중 반영 상태가 빈 것 ${withExtra.filter((it) => !it.status).length}개 · 담당자가 빈 일정 ${items.filter((it) => !it.owner).length}개${r.schedule.hidden ? ` · 숨긴 줄 ${r.schedule.hidden}개` : ""}` : "";
+    const schBox = box(`이벤트 달력 일정 ${items.length}개`, items.length
+      ? table([["날짜", "이름", "추가 시간", "반영 상태", "담당자"], ...items.map((it) => [md(it.date), it.title, it.extra ? Calendar.hoursText(Calendar.hours(it.extra)) : "", it.extra ? blank(it.status) : "", blank(it.owner)])])
+      : none("시트를 읽지 못해 원래 운영표(data.js)를 씁니다."), schNote);
+    // 답 확인
+    const checks = r.answers ? r.answers.checks : {};
+    const cnt = (s) => Object.values(checks).filter((c) => c.state === s).length;
+    const notOk = Object.keys(checks).filter((id) => checks[id].state !== "ok").map((id) => FAQS.find((f) => f.id === +id)).filter(Boolean);
+    const ansBox = box("질문 답 확인", r.answers
+      ? `<p class="ops-count">질문 ${FAQS.length}개 중 맞음 <b>${cnt("ok")}</b> · 운영진 수정 <b>${cnt("fixed")}</b> · 고치는 중 <b>${cnt("fixing")}</b> · 아직 안 봄 <b>${FAQS.length - Object.keys(checks).length}</b></p>${notOk.length ? `<ul class="ops-list">${notOk.map((f) => `<li><a class="text-link" href="#faq/${f.id}">${f.id} · ${esc(f.q)}</a></li>`).join("")}</ul>` : ""}`
+      : none("시트를 읽지 못했습니다."));
+    const howBox = box("쓰는 법", `<ul class="ops-list">
+        <li>입력판의 <b>일정</b> 탭은 이벤트 달력, <b>고정·알림</b> 탭은 공지사항 맨 위 고정과 모든 화면 맨 위 알림, <b>답 확인</b> 탭은 질문 옆 '운영진 확인'이 됩니다.</li>
+        <li>보이기를 '아니요'로 바꾸면 사이트에서 빠집니다. 줄을 지우지 않아도 됩니다.</li>
+        <li>고정과 알림에 끝을 적으면 그때 저절로 내려갑니다.</li>
+        <li>시트를 고친 뒤 사이트에 나오기까지 구글에서 몇 분 걸릴 수 있습니다. 이 화면의 '다시 읽기'를 누르면 바로 다시 읽습니다.</li>
+        <li>이 시트의 내용은 공개됩니다. 교육생 이름 · 연락처 · 개인별 출입 시간이나 추가 시간은 넣지 않습니다.</li>
+      </ul>`);
+    main.innerHTML = `<section class="ops" aria-labelledby="h-ops">
+      <div class="ops-head">
+        <h1 class="page-title" id="h-ops">운영진용 화면</h1>
+        <p class="sec-desc">운영진 입력판(구글 시트)에 적은 내용이 사이트에 어떻게 나오는지 보는 곳입니다. 고치는 일은 시트에서 합니다.</p>
+        <div class="ops-actions">${edit ? `<a class="btn btn-primary btn-s" href="${esc(edit)}" target="_blank" rel="noopener">입력판 열기</a>` : ""}${has ? '<button class="btn btn-tertiary btn-s" type="button" id="opsReload">다시 읽기</button>' : ""}</div>
+        <p class="ops-status">${esc(status)}</p>
+      </div>
+      ${probBox}${alertBox}${pinBox}${schBox}${ansBox}${howBox}
+    </section>`;
+    const rb = $("#opsReload");
+    if (rb) rb.addEventListener("click", async () => {
+      rb.disabled = true; rb.textContent = "읽는 중…";
+      Analytics.event("ops-reload");
+      if (await OpsSheet.refresh()) { location.reload(); return; }
+      rb.disabled = false; rb.textContent = "다시 읽기";
+      toast("시트를 읽지 못했습니다. 잠시 뒤 다시 눌러 주세요.");
+    });
+  }
+
+  /* ---------- 운영진 알림: 모든 화면 맨 위 한 줄 (운영진 입력판의 고정·알림 탭) ---------- */
+  // 닫은 알림은 이 브라우저에 적어 두고 다시 띄우지 않는다 (내용이나 끝이 바뀌면 새 알림으로 본다)
+  (function renderAlerts() {
+    const box = $("#opsAlerts");
+    if (!box || typeof OpsSheet === "undefined") return;
+    const OFF = "qna-alert-off";
+    let off = [];
+    try { off = JSON.parse(localStorage.getItem(OFF) || "[]"); } catch (e) { off = []; }
+    const list = OpsSheet.alerts().filter((a) => !off.includes(a.key));
+    box.hidden = !list.length;
+    box.innerHTML = list.map((a, i) => `<p class="ops-alert" role="status" data-i="${i}"><b>알림</b><span class="t">${esc(a.text)}${a.notice ? ` <a href="#notice/${a.notice}">자세히</a>` : a.link ? ` <a href="${esc(a.link)}" target="_blank" rel="noopener">자세히</a>` : ""}</span><button class="ops-alert-x" type="button" aria-label="이 알림 닫기">${ICON.close}</button></p>`).join("");
+    box.addEventListener("click", (e) => {
+      const b = e.target.closest(".ops-alert-x"); if (!b) return;
+      const p = b.closest(".ops-alert"), a = list[+p.dataset.i];
+      off.push(a.key);
+      try { localStorage.setItem(OFF, JSON.stringify(off.slice(-50))); } catch (err) { /* 저장 못 해도 이번엔 닫힌다 */ }
+      p.remove();
+      if (!box.querySelector(".ops-alert")) box.hidden = true;
+      Analytics.event("ops-alert-close");
+    });
+  })();
+
   /* ---------- 라우터 ---------- */
   // #home 공지사항 · #event 이벤트(달력) · #event/2026-11-20 그 날의 일정 · #notice/8 공지 하나 · #faq/24 그 질문이 든 공지(질문을 펼쳐서)
   // (예전 주소) #faq, #notice → 공지사항 목록
@@ -904,6 +1011,12 @@
   function renderRoute() {
     const [page, idText] = location.hash.replace(/^#/, "").split("/");
     const id = +idText;
+    if (page === "ops") {
+      main.dataset.view = "ops";
+      renderOps();
+      window.scrollTo(0, 0);
+      return;
+    }
     if (page === "event") {
       main.dataset.view = "event";
       renderEvents(idText || "");
@@ -1115,7 +1228,7 @@
     let html;
     if (best) {
       markRead(`f${best.id}`); // 답을 보여 줬으니 본 글로 적는다
-      html = `<span class="bq">${esc(best.q)}</span>${paras(best.a)}`;
+      html = `<span class="bq">${esc(best.q)}</span>${paras(best.a)}${opsLine(best)}`;
       const links = [
         linkBtn(`#faq/${best.id}`, "이 답이 있는 공지에서 보기", ICON.chevR),
         ...notes.map((n) => linkBtn(`#notice/${n.id}`, n.title, ICON.doc)),
@@ -1145,4 +1258,9 @@
     if (location.hash === href) route(); else location.hash = href;
     if (window.matchMedia("(max-width: 1023px)").matches) closeChat();
   });
-})();
+};
+
+// 운영진 입력판(js/ops.js)을 읽은 뒤에 그린다. ops.js 가 없거나 시트를 못 읽어도 3초 안에 data.js 로 그린다
+Promise.race([typeof OpsSheet === "undefined" ? Promise.resolve() : OpsSheet.ready, new Promise((r) => setTimeout(r, 3000))])
+  .catch(() => {})
+  .then(startApp);
