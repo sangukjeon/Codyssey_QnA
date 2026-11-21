@@ -989,6 +989,43 @@ details.ev-faq > .link-list { padding: 0 8px 10px; border-top: 1px solid var(--d
   .ev-row .chev { grid-area: chev; }
 }
 
+/* ---------- 운영진 입력판 (js/ops.js) ---------- */
+/* 모든 화면 맨 위 알림: 입력판의 고정·알림 탭에서 '알림'으로 적은 한 줄. 닫으면 이 브라우저에서는 다시 안 뜬다 */
+.ops-alerts { display: grid; gap: 8px; margin: 14px 0 0; }
+.ops-alert { margin: 0; display: flex; align-items: flex-start; gap: 10px; padding: 10px 4px 10px 14px; border: 1px solid #f6c48f; border-radius: var(--r-400); background: #fff6ec; font-size: 0.9375rem; line-height: 1.55; color: var(--text-strong); }
+.ops-alert > b { flex-shrink: 0; font-weight: 700; color: #8a4300; }
+.ops-alert .t { flex: 1; min-width: 0; overflow-wrap: anywhere; text-wrap: pretty; }
+.ops-alert a { color: var(--primary); font-weight: 600; text-underline-offset: 3px; }
+.ops-alert-x { flex-shrink: 0; width: 44px; height: 44px; margin: -11px 0; display: grid; place-items: center; border: 0; border-radius: var(--r-250); background: transparent; color: var(--text-secondary); cursor: pointer; }
+.ops-alert-x:hover { background: rgba(138, 67, 0, 0.08); color: var(--text-strong); }
+/* 질문 옆 '운영진 확인' · '고치는 중'과 펼친 답 아래 한 줄 (입력판의 답 확인 탭) */
+.tag.tag-ops { color: #2f6110; background: #eaf6df; }
+.tag.tag-fixing { color: #8a4300; background: #ffefe0; }
+.faq-ops { margin: 10px 2px 0; font-size: 0.875rem; line-height: 1.5; font-weight: 600; color: #2f6110; }
+.faq-ops.fixing { color: #8a4300; }
+/* 달력 일정의 추가 시간 반영 상태 (입력판의 일정 탭) */
+.tag.tag-st.st-plan { color: var(--primary-strong); background: var(--blue-50); }
+.tag.tag-st.st-doing { color: #8a4300; background: #ffefe0; }
+.tag.tag-st.st-done { color: #2f6110; background: #eaf6df; }
+/* 처음 그리기 전: 입력판을 읽는 동안 (길어야 2.5초) */
+.boot-wait { margin: 0; padding: 48px 0; text-align: center; font-size: 0.9375rem; color: var(--text-secondary); }
+/* 운영진용 화면 (#ops) */
+.ops { display: grid; gap: 14px; padding-bottom: 8px; }
+.ops-head { display: grid; gap: 10px; }
+.ops-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.ops-status { margin: 0; font-size: 0.9375rem; line-height: 1.55; color: var(--text-secondary); }
+.ops-box { min-width: 0; padding: 16px; background: var(--white); border: 1px solid var(--divider-weak); border-radius: var(--r-400); }
+.ops-box.warn { border-color: #f6c48f; background: #fffaf3; }
+.ops-box h2 { margin: 0 0 6px; font-size: 1.0625rem; line-height: 1.5; font-weight: 700; color: var(--text-strong); }
+.ops-note, .ops-none, .ops-count { margin: 0 0 6px; font-size: 0.9375rem; line-height: 1.55; color: var(--text-secondary); }
+.ops-count b { color: var(--text-strong); }
+.ops-ok { margin: 0; display: flex; align-items: center; gap: 6px; font-size: 0.9375rem; font-weight: 600; color: #2f6110; }
+.ops-list { margin: 4px 0 0; padding-left: 1.2em; display: grid; gap: 6px; font-size: 0.9375rem; line-height: 1.55; color: var(--text-primary); }
+.ops-list b { margin-right: 4px; color: var(--text-strong); }
+.ops .tbl-wrap { margin: 6px 0 0; }
+.ops .tbl tbody th { white-space: normal; min-width: 0; } /* 휴대폰에서도 알림 · 공지 제목이 칸 안에서 줄바꿈 */
+.foot-about a { text-decoration: underline; text-underline-offset: 3px; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: 0s !important; animation-duration: 0s !important; }
   .btn:active, .chip:active, .icon-btn:active, .chat-fab:active, .logo:active, .news-card:active, .pg-btn:active,
