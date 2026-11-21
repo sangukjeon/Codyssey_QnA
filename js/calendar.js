@@ -39,18 +39,21 @@ const Calendar = (() => {
     return !!x && !!y && (x.includes(y) || y.includes(x));
   }
   const startOf = (time) => { const m = String(time || "").match(/(\d{1,2}):(\d{2})/); return m ? +m[1] * 60 + +m[2] : 1e9; }; // 시각이 없으면 그날 맨 뒤
-  // 같은 날 같은 일을 하나로. 먼저 온 쪽의 이름을 쓰고, 비어 있는 칸(시각 · 장소 · 추가 시간 · 담당자 · 설명)만 뒤에 온 쪽으로 채운다
+  // 같은 날 같은 일을 하나로. 먼저 온 쪽의 이름을 쓰고, 비어 있는 칸(시각 · 장소 · 추가 시간 · 반영 상태 · 담당자 · 설명 · 신청)만 뒤에 온 쪽으로 채운다
   function merge(list) {
     const out = [];
     for (const src of list) {
       if (!src || !isDate(src.date)) continue;
       let it = out.find((x) => same(x, src));
-      if (!it) { it = { date: src.date, kind: src.kind, title: src.title, time: "", place: "", extra: 0, owner: "", sub: "", links: [], origins: [] }; out.push(it); }
+      if (!it) { it = { date: src.date, kind: src.kind, title: src.title, time: "", place: "", extra: 0, status: "", owner: "", sub: "", apply: "", applyBy: "", links: [], origins: [] }; out.push(it); }
       it.time = it.time || src.time || "";
       it.place = it.place || src.place || "";
       it.extra = it.extra || hours(src.extra);
+      it.status = it.status || src.status || ""; // 추가 시간 반영 상태: 예정 · 반영 중 · 반영 완료 (운영진 입력판)
       it.owner = it.owner || String(src.owner || "").trim();
       it.sub = it.sub || src.sub || "";
+      it.apply = it.apply || src.apply || "";       // 신청 링크 (운영진 입력판)
+      it.applyBy = it.applyBy || src.applyBy || ""; // 신청 마감 (운영진 입력판)
       for (const l of src.links || []) if (l && !it.links.some((x) => x.href === l.href)) it.links.push(l);
       if (!it.origins.includes(src.origin)) it.origins.push(src.origin);
     }
@@ -73,8 +76,11 @@ const Calendar = (() => {
     }));
     const table = ops.map((o) => ({
       origin: "ops", date: o.date, kind: o.kind, title: o.title, time: o.time, place: o.place, extra: o.extra, owner: o.owner,
-      // 출처: 자세한 공지가 따로 있으면 그것 먼저, 그다음 운영표 공지
-      links: [o.notice != null && o.notice !== opsSource ? nLink(o.notice) : null, opsSource != null ? nLink(opsSource) : null],
+      sub: o.sub, status: o.status, apply: o.apply, applyBy: o.applyBy,
+      // 출처: 운영진 입력판(js/ops.js)에서 온 줄은 그 줄에 적힌 공지 번호들(notices),
+      //       data.js 의 줄은 자세한 공지가 따로 있으면 그것 먼저, 그다음 운영표 공지
+      links: Array.isArray(o.notices) ? o.notices.map(nLink)
+        : [o.notice != null && o.notice !== opsSource ? nLink(o.notice) : null, opsSource != null ? nLink(opsSource) : null],
     }));
     const sched = schedule.map((s) => ({
       origin: "sched", date: s.date, kind: s.kind || (/시험/.test(s.title) ? "exam" : "deadline"), title: s.title, sub: s.sub,

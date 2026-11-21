@@ -53,8 +53,10 @@ check("12/31 사물함 마감은 질문 16으로 이어짐", day("2026-12-31").m
 // 예정 추가 시간 (R3)
 check("11/18: 설명회 +1, 네트워킹 +2 (시작 시각 순)", day("2026-11-18").map((x) => [x.kind, x.extra]), [["seminar", 1], ["network", 2]]);
 check("11/20 시험 +3", exam20.extra, 3);
-check("11월 예정 추가 시간 합계 6시간", Calendar.extraTotal(nov), 6);
-check("추가 시간이 적힌 일정은 셋뿐 — 나머지는 0 (지어내지 않음)", CAL.filter((x) => x.extra).length, 3);
+// 간식데이 3차 1시간(3회차 모집 공지) · 성과공유 컨퍼런스 8시간(현장 서명 시, 운영진 답변 11/5)을 11/21에 더함: 1 + 2 + 3 + 1 + 8
+check("11/20 간식데이 +1, 11/26 컨퍼런스 +8 (설명 한 줄과 함께)", [day("2026-11-20").find((x) => x.kind === "snack").extra, day("2026-11-26").filter((x) => x.kind === "ops").map((x) => [x.extra, /현장 서명/.test(x.sub)])], [1, [[8, true]]]);
+check("11월 예정 추가 시간 합계 15시간", Calendar.extraTotal(nov), 15);
+check("추가 시간이 적힌 일정은 다섯뿐 — 나머지는 0 (지어내지 않음)", CAL.filter((x) => x.extra).length, 5);
 check("12월 합계 0", Calendar.extraTotal(Calendar.inMonth(CAL, "2026-12")), 0);
 
 // 담당자 (R4) — 아직 모으지 않았다
@@ -70,7 +72,7 @@ check("달 넘기기", [Calendar.shiftMonth("2026-11", 1), Calendar.shiftMonth("
 check("날 넘기기 (달을 넘어감)", [Calendar.shiftDay("2026-11-30", 1), Calendar.shiftDay("2026-11-01", -1), Calendar.shiftDay("2026-11-20", 7)], ["2026-12-01", "2026-10-31", "2026-11-27"]);
 
 // 칸 이름 (R7)
-check("칸 이름: 11월 20일", Calendar.dayLabel("2026-11-20", day("2026-11-20").filter((x) => x.kind === "snack" || x.kind === "exam")), "11월 20일 금요일, 일정 2개, 추가 3시간");
+check("칸 이름: 11월 20일", Calendar.dayLabel("2026-11-20", day("2026-11-20").filter((x) => x.kind === "snack" || x.kind === "exam")), "11월 20일 금요일, 일정 2개, 추가 4시간");
 check("칸 이름: 일정 없는 날", Calendar.dayLabel("2026-11-21", day("2026-11-21")), "11월 21일 토요일, 일정 없음");
 check("날짜 꼴 확인", ["2026-11-20", "2026-11-31", "2026-13-01", "event"].map(Calendar.isDate), [true, false, false, false]);
 
@@ -107,6 +109,18 @@ const seminars = Calendar.merge([
 ]);
 check("같은 날 다른 세미나는 따로, 같은 세미나는 하나로", seminars.map((x) => [x.title, x.time]), [["텀 설명회", "16:00~17:00"], ["취업 특강", ""]]);
 check("날짜가 틀린 줄은 버림", Calendar.merge([{ origin: "ops", date: "2026-11-31", kind: "ops", title: "없는 날" }]).length, 0);
+
+// 운영진 입력판(js/ops.js)에서 온 줄: 반영 상태 · 신청 링크 · 신청 마감 · 설명이 따라오고, 출처는 그 줄에 적힌 공지 번호들
+const fromSheet = Calendar.build({
+  notices: [{ id: 22, title: "보기 명단" }, { id: 24, title: "보기 운영표" }],
+  opsSource: 24,
+  ops: [
+    { date: "2026-11-20", title: "입학연수과정 시험 3차", kind: "exam", extra: 3, status: "반영 중", notices: [22, 24], fromSheet: true },
+    { date: "2026-12-02", title: "미션데이 3차", kind: "mission", extra: "4시간", status: "예정", apply: "https://forms.gle/abc", applyBy: "11/30 18:00", sub: "선착순 50명", notices: [], fromSheet: true },
+  ],
+});
+check("입력판 줄: 반영 상태와 출처(적힌 공지 번호 순서)", fromSheet.filter((x) => x.kind === "exam").map((x) => [x.status, x.links.map((l) => l.href)]), [["반영 중", ["#notice/22", "#notice/24"]]]);
+check("입력판 줄: 신청 링크 · 마감 · 설명, 공지 번호가 없으면 출처도 없음", fromSheet.filter((x) => x.kind === "mission").map((x) => [x.extra, x.status, x.apply, x.applyBy, x.sub, x.links.length]), [[4, "예정", "https://forms.gle/abc", "11/30 18:00", "선착순 50명", 0]]);
 
 // 추가 시간 읽기 · 쓰기
 check("추가 시간 읽기", [3, "2시간", "1시간 30분", "30분", "", undefined, "미정"].map(Calendar.hours), [3, 2, 1.5, 0.5, 0, 0, 0]);
